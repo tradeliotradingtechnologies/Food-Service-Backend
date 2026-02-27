@@ -1,11 +1,13 @@
-import { Document, Types } from "mongoose";
+import { Document } from "mongoose";
+
+export type UserRole = "customer" | "super_admin" | "admin";
 
 export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
   passwordConfirm: string;
-  role: Types.ObjectId;
+  role: UserRole[];
   location: string;
   landMark: string;
   phoneNumber: string;

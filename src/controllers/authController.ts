@@ -1,27 +1,40 @@
 import { Request, Response } from "express";
 import catchAsync from "../utils/catchAsync.js";
-import Role from "../models/roleModel.js";
 import User from "../models/userModel.js";
+import jwt from "jsonwebtoken";
+
+const signToken = (userId: string) => {
+  // In a real application, you would use a secret from environment variables
+  const secret: string = process.env.JWT_SECRET!;
+  // const expiresIn: string = process.env.JWT_EXPIRES_IN!;
+  const token = jwt.sign({ id: userId }, secret, {
+    expiresIn: "90d",
+  });
+  return token;
+};
+
+// Set JWT in HTTP-only cookie;
+const createSendToken = (user: any, res: Response) => {
+  const token = signToken(user._id);
+  res.cookie("jwt", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    sameSite: "strict", // Prevent CSRF
+    maxAge: parseInt(process.env.JWT_EXPIRES_IN!) * 24 * 60 * 60 * 1000, // 90days
+  });
+};
 
 export const signup = catchAsync(async (req: Request, res: Response) => {
-  const { role, ...payload } = req.body;
-
-  let roleId = role;
-  if (!roleId) {
-    const defaultRole = await Role.findOne({ name: "user" });
-    if (!defaultRole) {
-      return res.status(500).json({
-        status: "error",
-        message: "Default role 'user' is not seeded",
-      });
-    }
-    roleId = defaultRole._id;
-  }
-
+  const { name, email, password, passwordConfirm } = req.body;
   const user = await User.create({
-    ...payload,
-    role: roleId,
+    name,
+    email,
+    password,
+    passwordConfirm,
+    role: ["customer"],
   });
+
+  createSendToken(user, res);
 
   res.status(201).json({
     status: "success",

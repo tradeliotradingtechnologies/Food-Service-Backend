@@ -1,36 +1,75 @@
 // schemas/user.schema.ts
 import { z } from "zod";
 
-const objectIdSchema = z
-  .string()
-  .regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId format");
-
-const userBodySchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  passwordConfirm: z.string().min(8, "Password must be at least 8 characters"),
-  role: objectIdSchema,
-  location: z.string(),
-  landMark: z.string(),
-  phoneNumber: z.string(),
-  active: z.boolean(),
-  passwordResetToken: z.string(),
-  passwordResetExpires: z.coerce.date(),
-  passwordChangedAt: z.coerce.date(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+const roleSchema = z.enum(["customer", "super_admin", "admin"], {
+  error: "Role must be one of: customer, super_admin, admin",
 });
 
+const roleArraySchema = z
+  .array(roleSchema)
+  .min(1, "At least one role is required");
+
+const dateSchema = (field: string) =>
+  z.coerce
+    .date()
+    .refine(
+      (value) => !Number.isNaN(value.getTime()),
+      `${field} must be a valid date`,
+    );
+
+const signupBodyBaseSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Email must be a valid email address"),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Password must be at least 8 characters"),
+  passwordConfirm: z
+    .string()
+    .min(1, "Password confirmation is required")
+    .min(8, "Password confirmation must be at least 8 characters"),
+  role: roleArraySchema.optional(),
+  location: z.string().min(1, "Location is required").optional(),
+  landMark: z.string().min(1, "Landmark is required").optional(),
+  phoneNumber: z
+    .string()
+    .min(1, "Phone number is required")
+    .regex(/^\+?[0-9]{7,15}$/, "Phone number must contain 7 to 15 digits")
+    .optional(),
+  active: z.boolean().optional(),
+  passwordResetToken: z
+    .string()
+    .min(1, "Password reset token is required")
+    .optional(),
+  passwordResetExpires: dateSchema("Password reset expiry").optional(),
+  passwordChangedAt: dateSchema("Password changed at").optional(),
+  createdAt: dateSchema("Created at").optional(),
+  updatedAt: dateSchema("Updated at").optional(),
+});
+
+const signupBodySchema = signupBodyBaseSchema.refine(
+  (data) => data.password === data.passwordConfirm,
+  {
+    path: ["passwordConfirm"],
+    message: "Passwords do not match",
+  },
+);
+
 export const signupSchema = z.object({
-  body: userBodySchema,
+  body: signupBodySchema,
 });
 
 export const loginSchema = z.object({
   params: z.object({
     id: z.string().min(1, "ID is required"),
   }),
-  body: userBodySchema.partial(),
+  body: signupBodyBaseSchema.partial(),
 });
 
 // Infer TypeScript types from schemas
