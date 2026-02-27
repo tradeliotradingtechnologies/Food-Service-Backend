@@ -14,7 +14,16 @@ const userSchema = new Schema<IUser>({
       "Passwords do not match",
     ],
   },
-  role: { type: Schema.Types.ObjectId, ref: "Role", required: true },
+  role: [{ type: Schema.Types.ObjectId, ref: "Role", required: true }],
+  location: { type: String },
+  landMark: { type: String },
+  phoneNumber: { type: String },
+  active: { type: Boolean, default: true },
+  passwordResetToken: { type: String },
+  passwordResetExpires: { type: Date },
+  passwordChangedAt: { type: Date },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date },
 });
 
 const User = model("User", userSchema);

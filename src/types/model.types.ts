@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   passwordConfirm: string;
-  role: Types.ObjectId; // Assuming role is stored as a reference to Role model's ObjectId
+  role: Types.ObjectId;
   location: string;
   landMark: string;
   phoneNumber: string;

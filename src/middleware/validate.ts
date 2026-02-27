@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodType, ZodError } from "zod";
 
-export const validate =
+const validate =
   (schema: ZodType) => (req: Request, res: Response, next: NextFunction) => {
     try {
       schema.parse({
@@ -24,3 +24,5 @@ export const validate =
       next(error);
     }
   };
+
+  export default validate;
