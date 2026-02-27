@@ -6,9 +6,18 @@ export interface IUser extends Document {
   password: string;
   passwordConfirm: string;
   role: Types.ObjectId; // Assuming role is stored as a reference to Role model's ObjectId
+  location: string;
+  landMark: string;
+  phoneNumber: string;
+  active: boolean;
+  passwordResetToken: string;
+  passwordResetExpires: Date;
+  passwordChangedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IRole extends Document {
   name: string;
   permissions: string[];
-}       
+}
