@@ -17,6 +17,8 @@ import testimonialRoute from "./routes/testimonialRoute.js";
 import menuItemLikeRoute from "./routes/menuItemLikeRoute.js";
 import newsletterRoute from "./routes/newsletterRoute.js";
 import adminRoute from "./routes/adminRoute.js";
+import analyticsRoute from "./routes/analyticsRoute.js";
+import reservationRoute from "./routes/reservationRoute.js";
 
 const app = express();
 
@@ -48,5 +50,7 @@ app.use("/api/testimonials", testimonialRoute);
 app.use("/api/likes", menuItemLikeRoute);
 app.use("/api/newsletter", newsletterRoute);
 app.use("/api/admin", adminRoute);
+app.use("/api/analytics", analyticsRoute);
+app.use("/api/reservations", reservationRoute);
 
 export default app;

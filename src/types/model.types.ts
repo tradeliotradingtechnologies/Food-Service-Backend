@@ -14,6 +14,8 @@ export const PERMISSION_RESOURCES = [
   "payment",
   "oauth",
   "auth",
+  "reservation",
+  "analytics",
 ] as const;
 export type PermissionResource = (typeof PERMISSION_RESOURCES)[number];
 
@@ -342,6 +344,36 @@ export interface INewsletterSubscriber extends Document {
   isActive: boolean;
   subscribedAt: Date;
   unsubscribedAt?: Date;
+}
+
+// ──────────────────────────────── Reservation ────────────────────────────────
+
+export const RESERVATION_STATUSES = [
+  "pending",
+  "confirmed",
+  "seated",
+  "completed",
+  "cancelled",
+  "no_show",
+] as const;
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
+
+export interface IReservation extends Document {
+  reservationNumber: string;
+  user?: Types.ObjectId | IUser;
+  guestName: string;
+  guestEmail?: string;
+  guestPhone: string;
+  date: Date;
+  time: string; // e.g. "19:00"
+  partySize: number;
+  tableNumber?: number;
+  status: ReservationStatus;
+  specialRequests?: string;
+  confirmedBy?: Types.ObjectId | IUser;
+  cancellationReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ──────────────────────────────── Audit Log ────────────────────────────────

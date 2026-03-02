@@ -229,6 +229,40 @@ const permissions: PermissionSeed[] = [
     resource: "oauth",
     action: "manage",
   },
+
+  // ── Reservation ───────────────────────────
+  {
+    name: "reservation:create",
+    description: "Create table reservations",
+    resource: "reservation",
+    action: "create",
+  },
+  {
+    name: "reservation:read",
+    description: "View all reservations",
+    resource: "reservation",
+    action: "read",
+  },
+  {
+    name: "reservation:update",
+    description: "Update reservation details and status",
+    resource: "reservation",
+    action: "update",
+  },
+  {
+    name: "reservation:delete",
+    description: "Delete reservations",
+    resource: "reservation",
+    action: "delete",
+  },
+
+  // ── Analytics ─────────────────────────────
+  {
+    name: "analytics:read",
+    description: "View dashboard analytics and statistics",
+    resource: "analytics",
+    action: "read",
+  },
 ];
 
 export async function seedPermissions(): Promise<void> {

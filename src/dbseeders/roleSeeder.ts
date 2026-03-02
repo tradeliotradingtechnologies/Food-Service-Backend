@@ -50,6 +50,11 @@ const roles: RoleSeed[] = [
       "payment:manage",
       "report:read",
       "setting:manage",
+      "reservation:create",
+      "reservation:read",
+      "reservation:update",
+      "reservation:delete",
+      "analytics:read",
     ],
   },
   {
@@ -64,6 +69,8 @@ const roles: RoleSeed[] = [
       "order:read",
       "order:update",
       "daily_special:read",
+      "reservation:read",
+      "reservation:update",
     ],
   },
   {
