@@ -1,13 +1,6 @@
 // schemas/user.schema.ts
 import { z } from "zod";
-
-const roleSchema = z.enum(["customer", "super_admin", "admin"], {
-  error: "Role must be one of: customer, super_admin, admin",
-});
-
-const roleArraySchema = z
-  .array(roleSchema)
-  .min(1, "At least one role is required");
+import { AUTH_METHODS } from "../types/model.types.js";
 
 const dateSchema = (field: string) =>
   z.coerce
@@ -16,6 +9,8 @@ const dateSchema = (field: string) =>
       (value) => !Number.isNaN(value.getTime()),
       `${field} must be a valid date`,
     );
+
+// ── Signup (local) ──────────────────────────────────────────────
 
 const signupBodyBaseSchema = z.object({
   name: z
@@ -34,23 +29,10 @@ const signupBodyBaseSchema = z.object({
     .string()
     .min(1, "Password confirmation is required")
     .min(8, "Password confirmation must be at least 8 characters"),
-  role: roleArraySchema.optional(),
-  location: z.string().min(1, "Location is required").optional(),
-  landMark: z.string().min(1, "Landmark is required").optional(),
   phoneNumber: z
     .string()
-    .min(1, "Phone number is required")
     .regex(/^\+?[0-9]{7,15}$/, "Phone number must contain 7 to 15 digits")
     .optional(),
-  active: z.boolean().optional(),
-  passwordResetToken: z
-    .string()
-    .min(1, "Password reset token is required")
-    .optional(),
-  passwordResetExpires: dateSchema("Password reset expiry").optional(),
-  passwordChangedAt: dateSchema("Password changed at").optional(),
-  createdAt: dateSchema("Created at").optional(),
-  updatedAt: dateSchema("Updated at").optional(),
 });
 
 const signupBodySchema = signupBodyBaseSchema.refine(
@@ -65,13 +47,60 @@ export const signupSchema = z.object({
   body: signupBodySchema,
 });
 
+// ── Login (local) ───────────────────────────────────────────────
+
 export const loginSchema = z.object({
-  params: z.object({
-    id: z.string().min(1, "ID is required"),
+  body: z.object({
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Email must be a valid email address"),
+    password: z.string().min(1, "Password is required"),
   }),
-  body: signupBodyBaseSchema.partial(),
+});
+
+// ── Google Auth ─────────────────────────────────────────────────
+
+export const googleAuthSchema = z.object({
+  body: z.object({
+    idToken: z.string().min(1, "Google ID token is required"),
+  }),
+});
+
+// ── Apple Auth ──────────────────────────────────────────────────
+
+export const appleAuthSchema = z.object({
+  body: z.object({
+    identityToken: z.string().min(1, "Apple identity token is required"),
+    user: z
+      .object({
+        name: z
+          .object({
+            firstName: z.string().optional(),
+            lastName: z.string().optional(),
+          })
+          .optional(),
+        email: z.string().email().optional(),
+      })
+      .optional(),
+  }),
+});
+
+// ── Update Profile ──────────────────────────────────────────────
+
+export const updateProfileSchema = z.object({
+  body: z.object({
+    name: z.string().min(2, "Name must be at least 2 characters").optional(),
+    phoneNumber: z
+      .string()
+      .regex(/^\+?[0-9]{7,15}$/, "Phone number must contain 7 to 15 digits")
+      .optional(),
+    avatar: z.string().url("Avatar must be a valid URL").optional(),
+  }),
 });
 
 // Infer TypeScript types from schemas
-export type signupInput = z.infer<typeof signupSchema>["body"];
-export type loginInput = z.infer<typeof loginSchema>["body"];
+export type SignupInput = z.infer<typeof signupSchema>["body"];
+export type LoginInput = z.infer<typeof loginSchema>["body"];
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>["body"];
+export type AppleAuthInput = z.infer<typeof appleAuthSchema>["body"];

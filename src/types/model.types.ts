@@ -1,25 +1,363 @@
-import { Document } from "mongoose";
+import { Document, Types } from "mongoose";
 
-export type UserRole = "customer" | "super_admin" | "admin";
+// ──────────────────────────────── Enums / Literals ────────────────────────────────
 
-export interface IUser extends Document {
+export const PERMISSION_RESOURCES = [
+  "user",
+  "menu",
+  "order",
+  "category",
+  "testimonial",
+  "report",
+  "setting",
+  "daily_special",
+  "payment",
+  "oauth",
+  "auth",
+] as const;
+export type PermissionResource = (typeof PERMISSION_RESOURCES)[number];
+
+export const PERMISSION_ACTIONS = [
+  "create",
+  "read",
+  "update",
+  "delete",
+  "manage",
+] as const;
+export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
+
+export const ROLE_NAMES = [
+  "super_admin",
+  "admin",
+  "staff",
+  "delivery_rider",
+  "customer",
+] as const;
+export type RoleName = (typeof ROLE_NAMES)[number];
+
+export const AUTH_METHODS = ["local", "google", "apple", "mixed"] as const;
+export type AuthMethod = (typeof AUTH_METHODS)[number];
+
+export const OAUTH_PROVIDERS = ["google", "apple"] as const;
+export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+export const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready_for_pickup",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export const PAYMENT_METHODS = [
+  "mobile_money",
+  "card",
+  "cash_on_delivery",
+] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const PAYMENT_STATUSES = [
+  "initiated",
+  "pending",
+  "success",
+  "failed",
+  "refunded",
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+// ──────────────────────────────── Permission ────────────────────────────────
+
+export interface IPermission extends Document {
   name: string;
-  email: string;
-  password: string;
-  passwordConfirm: string;
-  role: UserRole[];
-  location: string;
-  landMark: string;
-  phoneNumber: string;
-  active: boolean;
-  passwordResetToken: string;
-  passwordResetExpires: Date;
-  passwordChangedAt: Date;
+  description: string;
+  resource: PermissionResource;
+  action: PermissionAction;
   createdAt: Date;
   updatedAt: Date;
 }
 
+// ──────────────────────────────── Role ────────────────────────────────
+
 export interface IRole extends Document {
+  name: RoleName;
+  description: string;
+  permissions: Types.ObjectId[] | IPermission[];
+  isDefault: boolean;
+  isSystem: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── User ────────────────────────────────
+
+export interface IUser extends Document {
   name: string;
-  permissions: string[];
+  email: string;
+  password?: string;
+  passwordConfirm?: string;
+  authMethod: AuthMethod;
+  role: Types.ObjectId | IRole;
+  avatar?: string;
+  phoneNumber?: string;
+  addresses: Types.ObjectId[];
+  defaultAddress?: Types.ObjectId;
+  active: boolean;
+  emailVerified: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
+  passwordChangedAt?: Date;
+  loginAttempts: number;
+  lockUntil?: Date;
+  lastLoginAt?: Date;
+  lastLoginIp?: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Instance methods
+  correctPassword(
+    candidatePassword: string,
+    userPassword: string,
+  ): Promise<boolean>;
+  changedPasswordAfter(jwtTimestamp: number): boolean;
+  isLocked(): boolean;
+}
+
+// ──────────────────────────────── OAuth Account ────────────────────────────────
+
+export interface IOAuthAccount extends Document {
+  user: Types.ObjectId | IUser;
+  provider: OAuthProvider;
+  providerId: string;
+  email?: string;
+  displayName?: string;
+  avatar?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenExpiresAt?: Date;
+  rawProfile?: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── Refresh Token ────────────────────────────────
+
+export interface IRefreshToken extends Document {
+  user: Types.ObjectId | IUser;
+  token: string;
+  family: string;
+  expiresAt: Date;
+  revoked: boolean;
+  revokedAt?: Date;
+  replacedBy?: string;
+  userAgent?: string;
+  ipAddress?: string;
+  createdAt: Date;
+}
+
+// ──────────────────────────────── Address ────────────────────────────────
+
+export interface IAddress extends Document {
+  user: Types.ObjectId | IUser;
+  label?: string;
+  location: string;
+  landmark?: string;
+  gpsAddress?: string;
+  coordinates?: {
+    type: "Point";
+    coordinates: [number, number]; // [lng, lat]
+  };
+  phoneNumber: string;
+  isDefault: boolean;
+  createdAt: Date;
+}
+
+// ──────────────────────────────── Category ────────────────────────────────
+
+export interface ICategory extends Document {
+  name: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── Menu Item ────────────────────────────────
+
+export interface INutritionalInfo {
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
+export interface IMenuItem extends Document {
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  currency: string;
+  category: Types.ObjectId | ICategory;
+  images: string[];
+  preparationTime: number;
+  ingredients: string[];
+  allergens: string[];
+  nutritionalInfo?: INutritionalInfo;
+  isAvailable: boolean;
+  isFeatured: boolean;
+  likes: number;
+  averageRating: number;
+  totalReviews: number;
+  createdBy: Types.ObjectId | IUser;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── Daily Special ────────────────────────────────
+
+export interface IDailySpecial extends Document {
+  title: string;
+  description: string;
+  menuItem: Types.ObjectId | IMenuItem;
+  date: Date;
+  isActive: boolean;
+  sortOrder: number;
+  createdBy: Types.ObjectId | IUser;
+  createdAt: Date;
+}
+
+// ──────────────────────────────── Cart ────────────────────────────────
+
+export interface ICartItem {
+  menuItem: Types.ObjectId | IMenuItem;
+  quantity: number;
+  unitPrice: number;
+  addedAt: Date;
+}
+
+export interface ICart extends Document {
+  user: Types.ObjectId | IUser;
+  items: ICartItem[];
+  totalAmount: number;
+  expiresAt?: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── Order ────────────────────────────────
+
+export interface IOrderItem {
+  menuItem: Types.ObjectId | IMenuItem;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface IOrderStatusHistory {
+  status: OrderStatus;
+  changedBy?: Types.ObjectId | IUser;
+  changedAt: Date;
+  note?: string;
+}
+
+export interface IDeliveryAddress {
+  location: string;
+  landmark?: string;
+  gpsAddress?: string;
+  phoneNumber: string;
+}
+
+export interface IOrder extends Document {
+  orderNumber: string;
+  user: Types.ObjectId | IUser;
+  items: IOrderItem[];
+  deliveryAddress: IDeliveryAddress;
+  deliveryFee: number;
+  subtotal: number;
+  tax: number;
+  totalAmount: number;
+  status: OrderStatus;
+  statusHistory: IOrderStatusHistory[];
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  assignedRider?: Types.ObjectId | IUser;
+  estimatedDelivery?: Date;
+  deliveredAt?: Date;
+  notes?: string;
+  cancellationReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── Payment ────────────────────────────────
+
+export interface IPayment extends Document {
+  order: Types.ObjectId | IOrder;
+  user: Types.ObjectId | IUser;
+  amount: number;
+  currency: string;
+  method: PaymentMethod;
+  provider?: string;
+  providerRef?: string;
+  status: PaymentStatus;
+  paidAt?: Date;
+  refundedAt?: Date;
+  refundAmount?: number;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+}
+
+// ──────────────────────────────── Testimonial ────────────────────────────────
+
+export interface ITestimonial extends Document {
+  user: Types.ObjectId | IUser;
+  content: string;
+  rating: number;
+  menuItem?: Types.ObjectId | IMenuItem;
+  isApproved: boolean;
+  isFeatured: boolean;
+  approvedBy?: Types.ObjectId | IUser;
+  createdAt: Date;
+}
+
+// ──────────────────────────────── Menu Item Like ────────────────────────────────
+
+export interface IMenuItemLike extends Document {
+  user: Types.ObjectId | IUser;
+  menuItem: Types.ObjectId | IMenuItem;
+  createdAt: Date;
+}
+
+// ──────────────────────────────── Newsletter Subscriber ────────────────────────────────
+
+export interface INewsletterSubscriber extends Document {
+  email: string;
+  isActive: boolean;
+  subscribedAt: Date;
+  unsubscribedAt?: Date;
+}
+
+// ──────────────────────────────── Audit Log ────────────────────────────────
+
+export interface IAuditLog extends Document {
+  actor?: Types.ObjectId | IUser;
+  action: string;
+  resource: string;
+  resourceId?: Types.ObjectId;
+  changes?: {
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
+  };
+  ipAddress?: string;
+  userAgent?: string;
+  status: "success" | "failure";
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
 }
