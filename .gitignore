@@ -1,4 +1,26 @@
-dist/*
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Environment
 .env
-node_modules/*
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs (auto-generated)
 POSTMAN_TESTING_GUIDE.md

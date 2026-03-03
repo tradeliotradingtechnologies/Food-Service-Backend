@@ -1,0 +1,25 @@
+# ── Dependencies & build artifacts ─────────────────────────────
+node_modules
+npm-debug.log*
+
+# ── Source (not needed in image — we copy dist/) ──────────────
+src
+tsconfig.json
+*.ts
+
+# ── Dev & editor files ────────────────────────────────────────
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+*.md
+
+# ── Test / CI ─────────────────────────────────────────────────
+coverage
+__tests__
+*.test.*
+*.spec.*
+jest.config.*

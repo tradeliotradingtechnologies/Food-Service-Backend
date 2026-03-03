@@ -1,7 +1,7 @@
 {
-  "name": "y",
+  "name": "ericas-kitchen-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Erica's Kitchen Food Service Backend API",
   "homepage": "https://github.com/tradeliotradingtechnologies/Food-Service-Backend#readme",
   "bugs": {
     "url": "https://github.com/tradeliotradingtechnologies/Food-Service-Backend/issues"
@@ -13,20 +13,24 @@
   "license": "ISC",
   "author": "El-Partu",
   "type": "module",
-  "main": "app.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "nodemon dist/server.js",
-    "start:prod": "nodemon NODE_ENV=production app.js",
-    "build": "tsc --watch",
     "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "seed": "tsx src/dbseeders/seed.ts",
-    "seed:reset": "tsx src/dbseeders/seed.ts --reset"
+    "seed:reset": "tsx src/dbseeders/seed.ts --reset",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/hpp": "^0.2.7",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.3.1",
     "@types/nodemailer": "^7.0.11",
@@ -35,9 +39,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@types/bcrypt": "^6.0.0",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "apple-signin-auth": "^2.0.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
@@ -54,7 +55,9 @@
     "mongoose": "^9.2.3",
     "morgan": "^1.10.1",
     "nodemailer": "^8.0.1",
-    "nodemon": "^3.1.14",
     "zod": "^4.3.6"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

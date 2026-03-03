@@ -1,5 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
+
+// Load env FIRST — before anything reads process.env
+dotenv.config();
+
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -29,17 +33,21 @@ import globalErrorHandler from "./middleware/errorHandler.js";
 
 const app = express();
 
-dotenv.config({ path: ".env" });
+const isProduction = process.env.NODE_ENV === "production";
+
+// ── Trust Proxy ─────────────────────────────────────────────────
+// Required behind Nginx, ALB, Cloudflare, etc. so express sees
+// the real client IP for rate limiting and logging.
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
 
 // ── Security: HTTP Headers ──────────────────────────────────────
-// Sets Content-Security-Policy, X-Content-Type-Options, X-Frame-Options,
-// Strict-Transport-Security, X-XSS-Protection, etc.
 app.use(helmet());
 
 // ── Security: Rate Limiting ─────────────────────────────────────
-// Global limiter: 100 requests per 15 min per IP
 const globalLimiter = rateLimit({
-  max: 100,
+  max: isProduction ? 100 : 1000, // relaxed in dev
   windowMs: 15 * 60 * 1000,
   message: {
     status: "error",
@@ -51,9 +59,8 @@ const globalLimiter = rateLimit({
 });
 app.use("/api", globalLimiter);
 
-// Stricter limiter for auth endpoints: 20 requests per 15 min per IP
 const authLimiter = rateLimit({
-  max: 20,
+  max: isProduction ? 20 : 200,
   windowMs: 15 * 60 * 1000,
   message: {
     status: "error",
@@ -66,15 +73,28 @@ app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/signup", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
 
-if (process.env.NODE_ENV === "development") {
+// ── Logging ─────────────────────────────────────────────────────
+if (isProduction) {
+  // Compact, machine-parseable log line for production
+  app.use(morgan("combined"));
+} else {
   app.use(morgan("dev"));
 }
 
 // ── CORS ────────────────────────────────────────────────────────
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim());
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true, // Allow cookies
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, health checks)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
   }),
 );
 
@@ -84,11 +104,9 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
 // ── Security: NoSQL Injection Prevention ────────────────────────
-// Sanitizes req.body, req.query, req.params — strips $ and . characters
 app.use(mongoSanitize());
 
 // ── Security: HTTP Parameter Pollution ──────────────────────────
-// Prevents duplicate query params, whitelist fields that legitimately repeat
 app.use(
   hpp({
     whitelist: ["status", "category", "price", "sort", "page", "limit", "date"],
@@ -96,8 +114,17 @@ app.use(
 );
 
 // ── Compression ─────────────────────────────────────────────────
-// Gzip/Brotli response compression for all text-based responses
 app.use(compression());
+
+// ── Health Check ────────────────────────────────────────────────
+// Must be ABOVE auth — no auth needed. Load balancers / uptime monitors hit this.
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
 
 // ── API Routes ──────────────────────────────────────────────────
 app.use("/api/auth", userRoute);
@@ -116,13 +143,11 @@ app.use("/api/analytics", analyticsRoute);
 app.use("/api/reservations", reservationRoute);
 
 // ── 404 Catch-All ───────────────────────────────────────────────
-// Any route that doesn't match above will hit this
 app.all("*path", (req, _res, next) => {
   next(new AppError(`Cannot find ${req.method} ${req.originalUrl} on this server`, 404));
 });
 
 // ── Global Error Handler ────────────────────────────────────────
-// MUST be the last middleware — catches all errors from above
 app.use(globalErrorHandler);
 
 export default app;
