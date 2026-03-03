@@ -104,3 +104,46 @@ export type SignupInput = z.infer<typeof signupSchema>["body"];
 export type LoginInput = z.infer<typeof loginSchema>["body"];
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>["body"];
 export type AppleAuthInput = z.infer<typeof appleAuthSchema>["body"];
+
+// ── Forgot Password ─────────────────────────────────────────────
+
+export const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Email must be a valid email address"),
+  }),
+});
+
+// ── Reset Password ──────────────────────────────────────────────
+
+const resetPasswordBodySchema = z
+  .object({
+    password: z
+      .string()
+      .min(1, "Password is required")
+      .min(8, "Password must be at least 8 characters"),
+    passwordConfirm: z
+      .string()
+      .min(1, "Password confirmation is required"),
+  })
+  .refine((data) => data.password === data.passwordConfirm, {
+    path: ["passwordConfirm"],
+    message: "Passwords do not match",
+  });
+
+export const resetPasswordSchema = z.object({
+  params: z.object({
+    token: z.string().min(1, "Reset token is required"),
+  }),
+  body: resetPasswordBodySchema,
+});
+
+// ── Verify Email ────────────────────────────────────────────────
+
+export const verifyEmailSchema = z.object({
+  params: z.object({
+    token: z.string().min(1, "Verification token is required"),
+  }),
+});

@@ -6,6 +6,9 @@ import {
   refreshAccessToken,
   googleAuth,
   appleAuth,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController.js";
 import { authenticate } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
@@ -14,6 +17,9 @@ import {
   loginSchema,
   googleAuthSchema,
   appleAuthSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
 } from "../schema/userSchema.js";
 
 const router = Router();
@@ -25,6 +31,19 @@ router.post("/google", validate(googleAuthSchema), googleAuth);
 router.post("/apple", validate(appleAuthSchema), appleAuth);
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", logout);
+
+// ── Email verification & password reset (public) ────────────────
+router.get("/verify-email/:token", validate(verifyEmailSchema), verifyEmail);
+router.post(
+  "/forgot-password",
+  validate(forgotPasswordSchema),
+  forgotPassword,
+);
+router.patch(
+  "/reset-password/:token",
+  validate(resetPasswordSchema),
+  resetPassword,
+);
 
 // ── Protected test route ────────────────────────────────────────
 router.get("/test", authenticate, (req, res) => {

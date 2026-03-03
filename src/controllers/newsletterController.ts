@@ -1,9 +1,14 @@
 import { Request, Response } from "express";
 import catchAsync from "../utils/catchAsync.js";
 import * as newsletterService from "../services/newsletterService.js";
+import { sendNewsletterWelcomeEmail } from "../services/email/index.js";
 
 export const subscribe = catchAsync(async (req: Request, res: Response) => {
   const subscriber = await newsletterService.subscribe(req.body.email);
+
+  // Send newsletter welcome email (fire-and-forget)
+  sendNewsletterWelcomeEmail(subscriber.email);
+
   res.status(201).json({
     status: "success",
     message: "Successfully subscribed to newsletter",

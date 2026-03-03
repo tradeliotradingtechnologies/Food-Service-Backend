@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import catchAsync from "../utils/catchAsync.js";
 import * as reservationService from "../services/reservationService.js";
+import {
+  sendReservationConfirmationEmail,
+  sendReservationStatusEmail,
+} from "../services/email/index.js";
 
 export const createReservation = catchAsync(
   async (req: Request, res: Response) => {
@@ -9,6 +13,24 @@ export const createReservation = catchAsync(
       req.body,
       userId,
     );
+
+    // Send confirmation email if guest email provided
+    if (reservation.guestEmail) {
+      sendReservationConfirmationEmail(reservation.guestEmail, {
+        guestName: reservation.guestName,
+        reservationNumber: reservation.reservationNumber,
+        date: new Date(reservation.date).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        time: reservation.time,
+        partySize: reservation.partySize,
+        specialRequests: reservation.specialRequests,
+      });
+    }
+
     res.status(201).json({
       status: "success",
       data: { reservation },
@@ -78,6 +100,17 @@ export const updateReservationStatus = catchAsync(
       req.user._id,
       req.body.cancellationReason,
     );
+
+    // Notify guest of status change
+    if (reservation.guestEmail) {
+      sendReservationStatusEmail(reservation.guestEmail, {
+        guestName: reservation.guestName,
+        reservationNumber: reservation.reservationNumber,
+        status: reservation.status,
+        cancellationReason: reservation.cancellationReason,
+      });
+    }
+
     res.status(200).json({
       status: "success",
       data: { reservation },

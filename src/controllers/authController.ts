@@ -8,6 +8,13 @@ import RefreshToken from "../models/refreshTokenModel.js";
 import OAuthAccount from "../models/oauthAccountModel.js";
 import AuditLog from "../models/auditLogModel.js";
 import jwt from "jsonwebtoken";
+import {
+  sendWelcomeEmail,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+  sendAccountLockedEmail,
+} from "../services/email/index.js";
 
 // ── Token helpers ────────────────────────────────────────────────
 
@@ -89,6 +96,19 @@ export const signup = catchAsync(async (req: Request, res: Response) => {
 
   await createSendTokens(user, res, req);
 
+  // Send welcome email + verification
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  user.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+  user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+  await user.save({ validateBeforeSave: false });
+
+  // Fire-and-forget emails (won't block response)
+  sendWelcomeEmail(user.email, user.name);
+  sendEmailVerification(user.email, user.name, verificationToken);
+
   // Audit log
   await AuditLog.create({
     actor: user._id,
@@ -148,6 +168,7 @@ export const login = catchAsync(
       user.loginAttempts = (user.loginAttempts || 0) + 1;
       if (user.loginAttempts >= 5) {
         user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // Lock 15 min
+        sendAccountLockedEmail(user.email, user.name);
       }
       await user.save({ validateBeforeSave: false });
 
@@ -538,6 +559,145 @@ export const appleAuth = catchAsync(
     res.status(200).json({
       status: "success",
       message: "Apple authentication successful",
+    });
+  },
+);
+
+// ── Verify Email ──────────────────────────────────────────────────
+
+export const verifyEmail = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.params.token as string;
+
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: new Date() },
+    }).select("+emailVerificationToken");
+
+    if (!user) {
+      return next(
+        new AppError("Verification token is invalid or has expired", 400),
+      );
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      status: "success",
+      message: "Email verified successfully",
+    });
+  },
+);
+
+// ── Forgot Password ───────────────────────────────────────────────
+
+export const forgotPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email, active: true });
+
+    if (!user) {
+      // Don't reveal whether user exists — always return success
+      return res.status(200).json({
+        status: "success",
+        message:
+          "If an account with that email exists, a password reset link has been sent.",
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.passwordResetToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+    user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    await user.save({ validateBeforeSave: false });
+
+    // Send email (fire-and-forget)
+    sendPasswordResetEmail(user.email, user.name, resetToken);
+
+    await AuditLog.create({
+      actor: user._id,
+      action: "auth.forgot_password",
+      resource: "user",
+      resourceId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      status: "success",
+    });
+
+    res.status(200).json({
+      status: "success",
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    });
+  },
+);
+
+// ── Reset Password ────────────────────────────────────────────────
+
+export const resetPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.params.token as string;
+    const { password, passwordConfirm } = req.body;
+
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() },
+    }).select("+passwordResetToken");
+
+    if (!user) {
+      return next(
+        new AppError("Reset token is invalid or has expired", 400),
+      );
+    }
+
+    // Update password
+    user.password = password;
+    user.passwordConfirm = passwordConfirm;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    // Reset login attempts on successful password reset
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
+    // Revoke all refresh tokens for this user (force re-login)
+    await RefreshToken.updateMany(
+      { user: user._id, revoked: false },
+      { revoked: true, revokedAt: new Date() },
+    );
+
+    sendPasswordChangedEmail(user.email, user.name);
+
+    await AuditLog.create({
+      actor: user._id,
+      action: "auth.reset_password",
+      resource: "user",
+      resourceId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      status: "success",
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Password reset successfully. Please log in with your new password.",
     });
   },
 );

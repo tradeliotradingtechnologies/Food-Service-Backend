@@ -1,0 +1,15 @@
+export {
+  sendWelcomeEmail,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+  sendOrderConfirmationEmail,
+  sendOrderStatusEmail,
+  sendReservationConfirmationEmail,
+  sendReservationStatusEmail,
+  sendNewsletterWelcomeEmail,
+  sendPaymentConfirmationEmail,
+  sendAccountDeactivatedEmail,
+  sendAccountLockedEmail,
+  sendBulkEmail,
+} from "./emailService.js";
