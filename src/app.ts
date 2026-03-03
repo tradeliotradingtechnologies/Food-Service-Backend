@@ -24,6 +24,8 @@ import newsletterRoute from "./routes/newsletterRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import analyticsRoute from "./routes/analyticsRoute.js";
 import reservationRoute from "./routes/reservationRoute.js";
+import AppError from "./utils/appError.js";
+import globalErrorHandler from "./middleware/errorHandler.js";
 
 const app = express();
 
@@ -112,5 +114,15 @@ app.use("/api/newsletter", newsletterRoute);
 app.use("/api/admin", adminRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/reservations", reservationRoute);
+
+// ── 404 Catch-All ───────────────────────────────────────────────
+// Any route that doesn't match above will hit this
+app.all("*path", (req, _res, next) => {
+  next(new AppError(`Cannot find ${req.method} ${req.originalUrl} on this server`, 404));
+});
+
+// ── Global Error Handler ────────────────────────────────────────
+// MUST be the last middleware — catches all errors from above
+app.use(globalErrorHandler);
 
 export default app;
