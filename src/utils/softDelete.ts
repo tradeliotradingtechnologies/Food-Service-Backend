@@ -56,14 +56,14 @@ export function softDeletePlugin(schema: Schema): void {
 
   // ── 3. Aggregate middleware ─────────────────────────────────────
   schema.pre(
-    "aggregate",
+    "aggregate" as any,
     function (
       this: Aggregate<any>,
       next: CallbackWithoutResultAndOptionalError,
     ) {
       const pipeline = this.pipeline();
       // Check if $match with deletedAt already exists in the first stage
-      const firstStage = pipeline[0];
+      const firstStage = pipeline[0] as any;
       const hasDeletedAtMatch =
         firstStage?.$match && firstStage.$match.deletedAt !== undefined;
 
