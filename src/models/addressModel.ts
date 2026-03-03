@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { IAddress } from "../types/model.types.js";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const addressSchema = new Schema<IAddress>(
   {
@@ -32,6 +33,8 @@ const addressSchema = new Schema<IAddress>(
 // ── Indexes ──────────────────────────────────────────────
 addressSchema.index({ user: 1 });
 addressSchema.index({ coordinates: "2dsphere" });
+
+addressSchema.plugin(softDeletePlugin);
 
 const Address = model<IAddress>("Address", addressSchema);
 

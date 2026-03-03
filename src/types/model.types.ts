@@ -70,6 +70,14 @@ export const PAYMENT_STATUSES = [
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+// ──────────────────────────────── Soft Delete ────────────────────────────────
+
+export interface ISoftDeletable {
+  deletedAt: Date | null;
+  softDelete(): Promise<this>;
+  restore(): Promise<this>;
+}
+
 // ──────────────────────────────── Permission ────────────────────────────────
 
 export interface IPermission extends Document {
@@ -95,7 +103,7 @@ export interface IRole extends Document {
 
 // ──────────────────────────────── User ────────────────────────────────
 
-export interface IUser extends Document {
+export interface IUser extends Document, ISoftDeletable {
   name: string;
   email: string;
   password?: string;
@@ -163,7 +171,7 @@ export interface IRefreshToken extends Document {
 
 // ──────────────────────────────── Address ────────────────────────────────
 
-export interface IAddress extends Document {
+export interface IAddress extends Document, ISoftDeletable {
   user: Types.ObjectId | IUser;
   label?: string;
   location: string;
@@ -180,7 +188,7 @@ export interface IAddress extends Document {
 
 // ──────────────────────────────── Category ────────────────────────────────
 
-export interface ICategory extends Document {
+export interface ICategory extends Document, ISoftDeletable {
   name: string;
   slug: string;
   description?: string;
@@ -200,7 +208,7 @@ export interface INutritionalInfo {
   fat?: number;
 }
 
-export interface IMenuItem extends Document {
+export interface IMenuItem extends Document, ISoftDeletable {
   name: string;
   slug: string;
   description: string;
@@ -224,7 +232,7 @@ export interface IMenuItem extends Document {
 
 // ──────────────────────────────── Daily Special ────────────────────────────────
 
-export interface IDailySpecial extends Document {
+export interface IDailySpecial extends Document, ISoftDeletable {
   title: string;
   description: string;
   menuItem: Types.ObjectId | IMenuItem;
@@ -318,7 +326,7 @@ export interface IPayment extends Document {
 
 // ──────────────────────────────── Testimonial ────────────────────────────────
 
-export interface ITestimonial extends Document {
+export interface ITestimonial extends Document, ISoftDeletable {
   user: Types.ObjectId | IUser;
   content: string;
   rating: number;
@@ -358,7 +366,7 @@ export const RESERVATION_STATUSES = [
 ] as const;
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
-export interface IReservation extends Document {
+export interface IReservation extends Document, ISoftDeletable {
   reservationNumber: string;
   user?: Types.ObjectId | IUser;
   guestName: string;

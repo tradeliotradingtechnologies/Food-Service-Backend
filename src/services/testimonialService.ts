@@ -93,7 +93,11 @@ export const deleteTestimonial = async (id: string, userId?: string) => {
   const filter: Record<string, any> = { _id: id };
   if (userId) filter.user = userId;
 
-  const testimonial = await Testimonial.findOneAndDelete(filter);
+  const testimonial = await Testimonial.findOneAndUpdate(
+    filter,
+    { deletedAt: new Date() },
+    { new: true },
+  );
   if (!testimonial) throw new AppError("Testimonial not found", 404);
   return testimonial;
 };

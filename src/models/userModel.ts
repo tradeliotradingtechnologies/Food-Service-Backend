@@ -2,6 +2,7 @@ import { Schema, model } from "mongoose";
 import type { IUser } from "../types/model.types.js";
 import { AUTH_METHODS } from "../types/model.types.js";
 import bcrypt from "bcrypt";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const userSchema = new Schema<IUser>(
   {
@@ -65,8 +66,9 @@ const userSchema = new Schema<IUser>(
 
 // ── Indexes ──────────────────────────────────────────────
 userSchema.index({ role: 1 });
-userSchema.index({ active: 1 });
 userSchema.index({ passwordResetToken: 1 });
+
+userSchema.plugin(softDeletePlugin);
 
 // ── Pre-save: hash password ──────────────────────────────
 userSchema.pre("save", async function (this: IUser) {

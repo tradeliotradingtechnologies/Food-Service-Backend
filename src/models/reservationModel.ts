@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 import type { IReservation } from "../types/model.types.js";
 import { RESERVATION_STATUSES } from "../types/model.types.js";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const reservationSchema = new Schema<IReservation>(
   {
@@ -98,6 +99,8 @@ reservationSchema.pre("validate", async function () {
     this.reservationNumber = `RES-${dateStr}-${String(count + 1).padStart(4, "0")}`;
   }
 });
+
+reservationSchema.plugin(softDeletePlugin);
 
 const Reservation = model<IReservation>("Reservation", reservationSchema);
 export default Reservation;

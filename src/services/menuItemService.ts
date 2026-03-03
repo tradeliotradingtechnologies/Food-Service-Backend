@@ -107,7 +107,11 @@ export const updateMenuItem = async (id: string, data: Record<string, any>) => {
 };
 
 export const deleteMenuItem = async (id: string) => {
-  const item = await MenuItem.findByIdAndDelete(id);
+  const item = await MenuItem.findByIdAndUpdate(
+    id,
+    { deletedAt: new Date() },
+    { new: true },
+  );
   if (!item) throw new AppError("Menu item not found", 404);
   return item;
 };

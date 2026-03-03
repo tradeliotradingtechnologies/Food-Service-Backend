@@ -60,7 +60,11 @@ export const updateDailySpecial = async (
 };
 
 export const deleteDailySpecial = async (id: string) => {
-  const special = await DailySpecial.findByIdAndDelete(id);
+  const special = await DailySpecial.findByIdAndUpdate(
+    id,
+    { deletedAt: new Date() },
+    { new: true },
+  );
   if (!special) throw new AppError("Daily special not found", 404);
   return special;
 };

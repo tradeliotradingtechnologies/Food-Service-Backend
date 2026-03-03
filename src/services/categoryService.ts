@@ -47,7 +47,11 @@ export const updateCategory = async (
 };
 
 export const deleteCategory = async (id: string) => {
-  const category = await Category.findByIdAndDelete(id);
+  const category = await Category.findByIdAndUpdate(
+    id,
+    { deletedAt: new Date() },
+    { new: true },
+  );
   if (!category) throw new AppError("Category not found", 404);
   return category;
 };

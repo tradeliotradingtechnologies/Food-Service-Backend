@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { ITestimonial } from "../types/model.types.js";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const testimonialSchema = new Schema<ITestimonial>(
   {
@@ -33,6 +34,8 @@ const testimonialSchema = new Schema<ITestimonial>(
 // ── Indexes ──────────────────────────────────────────────
 testimonialSchema.index({ isFeatured: 1, isApproved: 1 });
 testimonialSchema.index({ menuItem: 1, isApproved: 1 });
+
+testimonialSchema.plugin(softDeletePlugin);
 
 const Testimonial = model<ITestimonial>("Testimonial", testimonialSchema);
 

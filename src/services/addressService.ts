@@ -52,7 +52,11 @@ export const updateAddress = async (
 };
 
 export const deleteAddress = async (id: string, userId: string) => {
-  const address = await Address.findOneAndDelete({ _id: id, user: userId });
+  const address = await Address.findOneAndUpdate(
+    { _id: id, user: userId },
+    { deletedAt: new Date() },
+    { new: true },
+  );
   if (!address) throw new AppError("Address not found", 404);
 
   await User.findByIdAndUpdate(userId, {

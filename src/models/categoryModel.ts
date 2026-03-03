@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { ICategory } from "../types/model.types.js";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const categorySchema = new Schema<ICategory>(
   {
@@ -24,6 +25,8 @@ categorySchema.pre("validate", function () {
       .replace(/(^-|-$)/g, "");
   }
 });
+
+categorySchema.plugin(softDeletePlugin);
 
 const Category = model<ICategory>("Category", categorySchema);
 

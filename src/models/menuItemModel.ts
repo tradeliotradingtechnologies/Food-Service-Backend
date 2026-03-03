@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { IMenuItem } from "../types/model.types.js";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const nutritionalInfoSchema = new Schema(
   {
@@ -61,6 +62,8 @@ menuItemSchema.pre("validate", function () {
       .replace(/(^-|-$)/g, "");
   }
 });
+
+menuItemSchema.plugin(softDeletePlugin);
 
 const MenuItem = model<IMenuItem>("MenuItem", menuItemSchema);
 

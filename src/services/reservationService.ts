@@ -199,7 +199,11 @@ export const getUserReservations = async (userId: string) => {
 // ── Delete Reservation ──────────────────────────────────────────
 
 export const deleteReservation = async (id: string) => {
-  const reservation = await Reservation.findByIdAndDelete(id);
+  const reservation = await Reservation.findByIdAndUpdate(
+    id,
+    { deletedAt: new Date() },
+    { new: true },
+  );
   if (!reservation) {
     throw new AppError("Reservation not found", 404);
   }

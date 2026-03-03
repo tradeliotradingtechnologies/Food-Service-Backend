@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import type { IDailySpecial } from "../types/model.types.js";
+import { softDeletePlugin } from "../utils/softDelete.js";
 
 const dailySpecialSchema = new Schema<IDailySpecial>(
   {
@@ -22,6 +23,8 @@ const dailySpecialSchema = new Schema<IDailySpecial>(
 
 // ── Indexes ──────────────────────────────────────────────
 dailySpecialSchema.index({ date: 1, isActive: 1 });
+
+dailySpecialSchema.plugin(softDeletePlugin);
 
 const DailySpecial = model<IDailySpecial>("DailySpecial", dailySpecialSchema);
 

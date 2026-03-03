@@ -98,7 +98,7 @@ export const deactivateUser = async (id: string, adminId: string) => {
   const user = await User.findById(id);
   if (!user) throw new AppError("User not found", 404);
 
-  user.active = false;
+  user.deletedAt = new Date();
   await user.save({ validateBeforeSave: false });
 
   await AuditLog.create({
