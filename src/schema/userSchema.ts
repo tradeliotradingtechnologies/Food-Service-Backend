@@ -99,6 +99,30 @@ export const updateProfileSchema = z.object({
   }),
 });
 
+// ── Update Password (authenticated) ────────────────────────────
+
+const updatePasswordBodySchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(1, "New password is required")
+      .min(8, "New password must be at least 8 characters"),
+    newPasswordConfirm: z.string().min(1, "Password confirmation is required"),
+  })
+  .refine((data) => data.newPassword === data.newPasswordConfirm, {
+    path: ["newPasswordConfirm"],
+    message: "Passwords do not match",
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    path: ["newPassword"],
+    message: "New password must be different from the current password",
+  });
+
+export const updatePasswordSchema = z.object({
+  body: updatePasswordBodySchema,
+});
+
 // Infer TypeScript types from schemas
 export type SignupInput = z.infer<typeof signupSchema>["body"];
 export type LoginInput = z.infer<typeof loginSchema>["body"];

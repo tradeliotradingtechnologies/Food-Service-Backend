@@ -9,6 +9,9 @@ import {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  updatePassword,
+  updateProfile,
+  getMe,
 } from "../controllers/authController.js";
 import { authenticate } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
@@ -20,6 +23,8 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyEmailSchema,
+  updatePasswordSchema,
+  updateProfileSchema,
 } from "../schema/userSchema.js";
 
 const router = Router();
@@ -41,9 +46,19 @@ router.patch(
   resetPassword,
 );
 
-// ── Protected test route ────────────────────────────────────────
-router.get("/test", authenticate, (req, res) => {
-  res.json({ message: "User route is working!", user: req.user?.name });
-});
+// ── Protected routes ────────────────────────────────────────────
+router.get("/me", authenticate, getMe);
+router.patch(
+  "/update-password",
+  authenticate,
+  validate(updatePasswordSchema),
+  updatePassword,
+);
+router.patch(
+  "/update-profile",
+  authenticate,
+  validate(updateProfileSchema),
+  updateProfile,
+);
 
 export default router;

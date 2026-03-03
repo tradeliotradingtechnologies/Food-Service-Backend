@@ -694,3 +694,125 @@ export const resetPassword = catchAsync(
     });
   },
 );
+
+// ── Update Password (authenticated) ──────────────────────────────
+
+export const updatePassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+
+    // Get user with password field
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    // Only local/mixed auth users can update password
+    if (user.authMethod !== "local" && user.authMethod !== "mixed") {
+      return next(
+        new AppError(
+          "Password update is not available for OAuth-only accounts. Use your OAuth provider to manage credentials.",
+          400,
+        ),
+      );
+    }
+
+    // Verify current password
+    const isCorrect = await user.correctPassword(
+      currentPassword,
+      user.password!,
+    );
+    if (!isCorrect) {
+      return next(new AppError("Current password is incorrect", 401));
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.passwordConfirm = newPasswordConfirm;
+    await user.save();
+
+    // Revoke all other refresh tokens (keep current session alive)
+    await RefreshToken.updateMany(
+      { user: user._id, revoked: false },
+      { revoked: true, revokedAt: new Date() },
+    );
+
+    // Re-issue tokens for current session
+    await createSendTokens(user, res, req);
+
+    sendPasswordChangedEmail(user.email, user.name);
+
+    await AuditLog.create({
+      actor: user._id,
+      action: "auth.update_password",
+      resource: "user",
+      resourceId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      status: "success",
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Password updated successfully",
+    });
+  },
+);
+
+// ── Update Profile (authenticated) ───────────────────────────────
+
+export const updateProfile = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { name, phoneNumber, avatar } = req.body;
+
+    // Build update object — only include fields that were provided
+    const updateData: Record<string, any> = {};
+    if (name !== undefined) updateData.name = name;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
+    if (Object.keys(updateData).length === 0) {
+      return next(new AppError("No fields to update", 400));
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate("role", "name");
+
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    await AuditLog.create({
+      actor: user._id,
+      action: "auth.update_profile",
+      resource: "user",
+      resourceId: user._id,
+      metadata: { updatedFields: Object.keys(updateData) },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      status: "success",
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Profile updated successfully",
+      data: { user },
+    });
+  },
+);
+
+// ── Get Current User (authenticated) ─────────────────────────────
+
+export const getMe = catchAsync(async (req: Request, res: Response) => {
+  const user = await User.findById(req.user._id)
+    .populate("role", "name")
+    .populate("addresses")
+    .populate("defaultAddress");
+
+  res.status(200).json({
+    status: "success",
+    data: { user },
+  });
+});
