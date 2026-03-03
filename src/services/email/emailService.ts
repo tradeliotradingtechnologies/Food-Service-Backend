@@ -58,7 +58,8 @@ const sendMail = async (options: SendMailOptions): Promise<string | null> => {
     const transport = await createTransporter();
 
     const from =
-      process.env.EMAIL_FROM || '"Erica\'s Kitchen" <noreply@ericaskitchen.com>';
+      process.env.EMAIL_FROM ||
+      '"Erica\'s Kitchen" <noreply@ericaskitchen.com>';
 
     const info = await transport.sendMail({
       from,

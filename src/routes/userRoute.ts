@@ -34,11 +34,7 @@ router.post("/logout", logout);
 
 // ── Email verification & password reset (public) ────────────────
 router.get("/verify-email/:token", validate(verifyEmailSchema), verifyEmail);
-router.post(
-  "/forgot-password",
-  validate(forgotPasswordSchema),
-  forgotPassword,
-);
+router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
 router.patch(
   "/reset-password/:token",
   validate(resetPasswordSchema),

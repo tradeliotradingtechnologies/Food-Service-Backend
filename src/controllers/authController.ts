@@ -569,10 +569,7 @@ export const verifyEmail = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const token = req.params.token as string;
 
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(token)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       emailVerificationToken: hashedToken,
@@ -651,10 +648,7 @@ export const resetPassword = catchAsync(
     const token = req.params.token as string;
     const { password, passwordConfirm } = req.body;
 
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(token)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       passwordResetToken: hashedToken,
@@ -662,9 +656,7 @@ export const resetPassword = catchAsync(
     }).select("+passwordResetToken");
 
     if (!user) {
-      return next(
-        new AppError("Reset token is invalid or has expired", 400),
-      );
+      return next(new AppError("Reset token is invalid or has expired", 400));
     }
 
     // Update password
@@ -697,7 +689,8 @@ export const resetPassword = catchAsync(
 
     res.status(200).json({
       status: "success",
-      message: "Password reset successfully. Please log in with your new password.",
+      message:
+        "Password reset successfully. Please log in with your new password.",
     });
   },
 );

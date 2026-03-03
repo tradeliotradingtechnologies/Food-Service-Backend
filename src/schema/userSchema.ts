@@ -124,9 +124,7 @@ const resetPasswordBodySchema = z
       .string()
       .min(1, "Password is required")
       .min(8, "Password must be at least 8 characters"),
-    passwordConfirm: z
-      .string()
-      .min(1, "Password confirmation is required"),
+    passwordConfirm: z.string().min(1, "Password confirmation is required"),
   })
   .refine((data) => data.password === data.passwordConfirm, {
     path: ["passwordConfirm"],

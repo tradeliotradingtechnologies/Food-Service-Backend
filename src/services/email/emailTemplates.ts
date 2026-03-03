@@ -61,7 +61,9 @@ const baseLayout = (content: string, preheader = ""): string => `
 
 // ── Individual Templates ────────────────────────────────────────
 
-export const welcomeEmail = (name: string): { subject: string; html: string } => ({
+export const welcomeEmail = (
+  name: string,
+): { subject: string; html: string } => ({
   subject: "Welcome to Erica's Kitchen! 🎉",
   html: baseLayout(
     `
@@ -126,7 +128,9 @@ export const passwordReset = (
   ),
 });
 
-export const passwordChanged = (name: string): { subject: string; html: string } => ({
+export const passwordChanged = (
+  name: string,
+): { subject: string; html: string } => ({
   subject: "Password Changed Successfully — Erica's Kitchen",
   html: baseLayout(
     `
@@ -336,7 +340,9 @@ export const reservationStatusUpdate = (data: {
   };
 };
 
-export const newsletterWelcome = (email: string): { subject: string; html: string } => ({
+export const newsletterWelcome = (
+  email: string,
+): { subject: string; html: string } => ({
   subject: "You're Subscribed! 🎉 — Erica's Kitchen Newsletter",
   html: baseLayout(
     `
@@ -387,7 +393,9 @@ export const paymentConfirmation = (data: {
   ),
 });
 
-export const accountDeactivated = (name: string): { subject: string; html: string } => ({
+export const accountDeactivated = (
+  name: string,
+): { subject: string; html: string } => ({
   subject: "Account Deactivated — Erica's Kitchen",
   html: baseLayout(
     `
@@ -403,7 +411,9 @@ export const accountDeactivated = (name: string): { subject: string; html: strin
   ),
 });
 
-export const accountLockedOut = (name: string): { subject: string; html: string } => ({
+export const accountLockedOut = (
+  name: string,
+): { subject: string; html: string } => ({
   subject: "⚠️ Account Locked — Erica's Kitchen",
   html: baseLayout(
     `
