@@ -18,7 +18,9 @@
     "start": "nodemon dist/server.js",
     "start:prod": "nodemon NODE_ENV=production app.js",
     "build": "tsc --watch",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "seed": "tsx src/dbseeders/seed.ts",
+    "seed:reset": "tsx src/dbseeders/seed.ts --reset"
   },
   "devDependencies": {
     "@types/compression": "^1.8.1",
