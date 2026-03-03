@@ -33,6 +33,11 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   APPLE_CLIENT_ID: z.string().optional(),
 
+  // ── Cloudinary (required for image uploads) ───────────────────
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+
   // ── SMTP (required in production) ─────────────────────────────
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().optional(),

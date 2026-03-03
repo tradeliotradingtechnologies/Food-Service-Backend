@@ -28,6 +28,7 @@ import newsletterRoute from "./routes/newsletterRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import analyticsRoute from "./routes/analyticsRoute.js";
 import reservationRoute from "./routes/reservationRoute.js";
+import uploadRoute from "./routes/uploadRoute.js";
 import AppError from "./utils/appError.js";
 import globalErrorHandler from "./middleware/errorHandler.js";
 
@@ -141,10 +142,16 @@ app.use("/api/newsletter", newsletterRoute);
 app.use("/api/admin", adminRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/reservations", reservationRoute);
+app.use("/api/uploads", uploadRoute);
 
 // ── 404 Catch-All ───────────────────────────────────────────────
 app.all("*path", (req, _res, next) => {
-  next(new AppError(`Cannot find ${req.method} ${req.originalUrl} on this server`, 404));
+  next(
+    new AppError(
+      `Cannot find ${req.method} ${req.originalUrl} on this server`,
+      404,
+    ),
+  );
 });
 
 // ── Global Error Handler ────────────────────────────────────────

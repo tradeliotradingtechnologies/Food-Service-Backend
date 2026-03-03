@@ -32,8 +32,10 @@
     "@types/hpp": "^0.2.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.3.1",
     "@types/nodemailer": "^7.0.11",
+    "@types/sharp": "^0.31.1",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
@@ -41,6 +43,7 @@
   "dependencies": {
     "apple-signin-auth": "^2.0.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -54,7 +57,9 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.3",
     "morgan": "^1.10.1",
+    "multer": "^2.1.0",
     "nodemailer": "^8.0.1",
+    "sharp": "^0.34.5",
     "zod": "^4.3.6"
   },
   "engines": {
