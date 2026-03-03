@@ -78,7 +78,7 @@ reservationSchema.index({ date: 1, time: 1 });
 reservationSchema.index({ status: 1 });
 reservationSchema.index({ user: 1 });
 reservationSchema.index({ guestPhone: 1 });
-reservationSchema.index({ reservationNumber: 1 });
+// reservationNumber index already created by `unique: true` on the field
 
 // Auto-generate reservation number: RES-YYYYMMDD-XXXX
 reservationSchema.pre("validate", async function () {
