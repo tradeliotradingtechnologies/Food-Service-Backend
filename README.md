@@ -4,7 +4,6 @@
 > **Base URL**: `http://localhost:3000/api`  
 > **Content-Type**: `application/json`  
 > **Authentication**: HTTP-only cookies (JWT)
-
 ---
 
 ## Table of Contents
