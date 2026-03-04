@@ -473,7 +473,7 @@ export const appleAuth = catchAsync(
     // Check existing OAuth link
     let oauthAccount = await OAuthAccount.findOne({
       provider: "apple",
-      providerId,Any middleware that tries to modify params,
+      providerId,
     });
 
     let user;
