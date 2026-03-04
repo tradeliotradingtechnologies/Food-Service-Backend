@@ -15,9 +15,10 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "start:prod": "npm run build && NODE_ENV=production node dist/server.js",
     "seed": "tsx src/dbseeders/seed.ts",
     "seed:reset": "tsx src/dbseeders/seed.ts --reset",
     "typecheck": "tsc --noEmit",
@@ -36,6 +37,7 @@
     "@types/node": "^25.3.1",
     "@types/nodemailer": "^7.0.11",
     "@types/sharp": "^0.31.1",
+    "nodemon": "^3.1.14",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
@@ -49,7 +51,6 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.2.1",
     "google-auth-library": "^10.6.1",
     "helmet": "^8.1.0",

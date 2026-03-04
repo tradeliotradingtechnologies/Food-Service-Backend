@@ -9,11 +9,11 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
+import mongoSanitize from "./middleware/mongoSanitize.js";
 import hpp from "hpp";
 import compression from "compression";
 
-// ── Route imports ───────────────────────────────────────────────
+// ── Route imports ─────────────────────────────────────────────
 import userRoute from "./routes/userRoute.js";
 import categoryRoute from "./routes/categoryRoute.js";
 import menuItemRoute from "./routes/menuItemRoute.js";
@@ -105,7 +105,7 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
 // ── Security: NoSQL Injection Prevention ────────────────────────
-app.use(mongoSanitize());
+app.use(mongoSanitize);
 
 // ── Security: HTTP Parameter Pollution ──────────────────────────
 app.use(
