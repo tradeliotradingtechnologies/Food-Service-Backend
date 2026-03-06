@@ -39,6 +39,16 @@ export const uploadSingle = multer({
 }).single("image");
 
 /**
+ * Avatar upload — field name "avatar"
+ * Usage: `router.patch("/update-profile", uploadAvatar, controller)`
+ */
+export const uploadAvatar = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: MAX_FILE_SIZE },
+}).single("avatar");
+
+/**
  * Multiple image upload — field name "images", max 10
  * Usage: `router.post("/", uploadMultiple, controller)`
  */

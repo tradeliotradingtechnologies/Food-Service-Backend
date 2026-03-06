@@ -15,7 +15,7 @@ import {
 } from "../controllers/authController.js";
 import { authenticate } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
-import { uploadSingle } from "../utils/multer.js";
+import { uploadAvatar } from "../utils/multer.js";
 import {
   signupSchema,
   loginSchema,
@@ -58,7 +58,7 @@ router.patch(
 router.patch(
   "/update-profile",
   authenticate,
-  uploadSingle,
+  uploadAvatar,
   validate(updateProfileSchema),
   updateProfile,
 );

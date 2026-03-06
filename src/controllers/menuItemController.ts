@@ -1,10 +1,28 @@
 import { Request, Response } from "express";
 import catchAsync from "../utils/catchAsync.js";
+import AppError from "../utils/appError.js";
 import * as menuItemService from "../services/menuItemService.js";
+import { processAndUploadMany } from "../services/imageService.js";
 
 export const createMenuItem = catchAsync(
   async (req: Request, res: Response) => {
-    const item = await menuItemService.createMenuItem(req.body, req.user._id);
+    const data = { ...req.body };
+
+    // Handle image file uploads
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (files && files.length > 0) {
+      const results = await processAndUploadMany(
+        files.map((f) => f.buffer),
+        { preset: "menuItem", folder: "ericas-kitchen/menu-items" },
+      );
+      data.images = results.map((r) => r.url);
+    }
+
+    if (!data.images || data.images.length === 0) {
+      throw new AppError("At least one image is required", 400);
+    }
+
+    const item = await menuItemService.createMenuItem(data, req.user._id);
     res.status(201).json({
       status: "success",
       data: { menuItem: item },
@@ -61,7 +79,19 @@ export const getMenuItemBySlug = catchAsync(
 
 export const updateMenuItem = catchAsync(
   async (req: Request<{ id: string }>, res: Response) => {
-    const item = await menuItemService.updateMenuItem(req.params.id, req.body);
+    const data = { ...req.body };
+
+    // Handle image file uploads
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (files && files.length > 0) {
+      const results = await processAndUploadMany(
+        files.map((f) => f.buffer),
+        { preset: "menuItem", folder: "ericas-kitchen/menu-items" },
+      );
+      data.images = results.map((r) => r.url);
+    }
+
+    const item = await menuItemService.updateMenuItem(req.params.id, data);
     res.status(200).json({
       status: "success",
       data: { menuItem: item },

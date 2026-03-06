@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as ctrl from "../controllers/menuItemController.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
+import { uploadMultiple } from "../utils/multer.js";
 import {
   createMenuItemSchema,
   updateMenuItemSchema,
@@ -22,6 +23,7 @@ router.use(authenticate);
 router.post(
   "/",
   authorize("menu:create"),
+  uploadMultiple,
   validate(createMenuItemSchema),
   ctrl.createMenuItem,
 );
@@ -29,6 +31,7 @@ router.post(
 router.patch(
   "/:id",
   authorize("menu:update"),
+  uploadMultiple,
   validate(updateMenuItemSchema),
   ctrl.updateMenuItem,
 );

@@ -2,11 +2,23 @@ import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import sharp from "sharp";
 
 // ── Cloudinary configuration ────────────────────────────────────
-cloudinary.config({
+// Lazy init: ESM hoists static imports before dotenv.config() runs,
+// so env vars are undefined at module‑load time. Configure on first use.
+let cloudinaryConfigured = false;
+console.log("Cloudinary config:", {
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  api_secret: process.env.CLOUDINARY_API_SECRET ? "****" : undefined,
 });
+function ensureCloudinaryConfig() {
+  if (cloudinaryConfigured) return;
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  cloudinaryConfigured = true;
+}
 
 // ── Processing presets ──────────────────────────────────────────
 interface ProcessingOptions {
@@ -57,6 +69,7 @@ export function uploadToCloudinary(
   buffer: Buffer,
   folder: string = "ericas-kitchen",
 ): Promise<UploadApiResponse> {
+  ensureCloudinaryConfig();
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
@@ -105,11 +118,13 @@ export async function processAndUploadMany(
 
 // ── Delete image from Cloudinary ────────────────────────────────
 export async function deleteImage(publicId: string): Promise<void> {
+  ensureCloudinaryConfig();
   await cloudinary.uploader.destroy(publicId);
 }
 
 // ── Delete multiple images ──────────────────────────────────────
 export async function deleteImages(publicIds: string[]): Promise<void> {
   if (publicIds.length === 0) return;
+  ensureCloudinaryConfig();
   await cloudinary.api.delete_resources(publicIds);
 }

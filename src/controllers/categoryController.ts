@@ -1,10 +1,22 @@
 import { Request, Response } from "express";
 import catchAsync from "../utils/catchAsync.js";
 import * as categoryService from "../services/categoryService.js";
+import { processAndUpload } from "../services/imageService.js";
 
 export const createCategory = catchAsync(
   async (req: Request, res: Response) => {
-    const category = await categoryService.createCategory(req.body);
+    const data = { ...req.body };
+
+    // Handle image file upload
+    if (req.file) {
+      const result = await processAndUpload(req.file.buffer, {
+        preset: "category",
+        folder: "ericas-kitchen/categories",
+      });
+      data.image = result.url;
+    }
+
+    const category = await categoryService.createCategory(data);
     res.status(201).json({
       status: "success",
       data: { category },
@@ -46,10 +58,18 @@ export const getCategoryBySlug = catchAsync(
 
 export const updateCategory = catchAsync(
   async (req: Request<{ id: string }>, res: Response) => {
-    const category = await categoryService.updateCategory(
-      req.params.id,
-      req.body,
-    );
+    const data = { ...req.body };
+
+    // Handle image file upload
+    if (req.file) {
+      const result = await processAndUpload(req.file.buffer, {
+        preset: "category",
+        folder: "ericas-kitchen/categories",
+      });
+      data.image = result.url;
+    }
+
+    const category = await categoryService.updateCategory(req.params.id, data);
     res.status(200).json({
       status: "success",
       data: { category },

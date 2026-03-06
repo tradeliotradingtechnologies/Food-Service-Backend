@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as ctrl from "../controllers/categoryController.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
+import { uploadSingle } from "../utils/multer.js";
 import {
   createCategorySchema,
   updateCategorySchema,
@@ -21,6 +22,7 @@ router.use(authenticate);
 router.post(
   "/",
   authorize("category:create"),
+  uploadSingle,
   validate(createCategorySchema),
   ctrl.createCategory,
 );
@@ -28,6 +30,7 @@ router.post(
 router.patch(
   "/:id",
   authorize("category:update"),
+  uploadSingle,
   validate(updateCategorySchema),
   ctrl.updateCategory,
 );

@@ -13,35 +13,97 @@ export const createMenuItemSchema = z.object({
   body: z.object({
     name: z.string().min(1, "Name is required").max(150),
     description: z.string().min(1, "Description is required").max(1000),
-    price: z.number().min(0, "Price must be non-negative"),
+    price: z
+      .union([z.number(), z.string()])
+      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
+      .pipe(z.number().min(0, "Price must be non-negative")),
     currency: z.string().length(3).optional(),
     category: z.string().min(1, "Category is required"),
-    images: z.array(z.string().url()).min(1, "At least one image is required"),
-    preparationTime: z.number().int().min(1, "Preparation time is required"),
-    ingredients: z.array(z.string()).optional(),
-    allergens: z.array(z.string()).optional(),
-    nutritionalInfo: nutritionalInfoSchema,
-    isAvailable: z.boolean().optional(),
-    isFeatured: z.boolean().optional(),
+    preparationTime: z
+      .union([z.number(), z.string()])
+      .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))
+      .pipe(z.number().int().min(1, "Preparation time is required")),
+    ingredients: z
+      .union([z.array(z.string()), z.string()])
+      .transform((val) =>
+        typeof val === "string" ? JSON.parse(val) : val,
+      )
+      .pipe(z.array(z.string()))
+      .optional(),
+    allergens: z
+      .union([z.array(z.string()), z.string()])
+      .transform((val) =>
+        typeof val === "string" ? JSON.parse(val) : val,
+      )
+      .pipe(z.array(z.string()))
+      .optional(),
+    nutritionalInfo: z
+      .union([nutritionalInfoSchema, z.string()])
+      .transform((val) =>
+        typeof val === "string" ? JSON.parse(val) : val,
+      )
+      .optional(),
+    isAvailable: z
+      .union([z.boolean(), z.string()])
+      .transform((val) => (typeof val === "string" ? val === "true" : val))
+      .optional(),
+    isFeatured: z
+      .union([z.boolean(), z.string()])
+      .transform((val) => (typeof val === "string" ? val === "true" : val))
+      .optional(),
   }),
 });
 
 export const updateMenuItemSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
-  body: z.object({
-    name: z.string().min(1).max(150).optional(),
-    description: z.string().min(1).max(1000).optional(),
-    price: z.number().min(0).optional(),
-    currency: z.string().length(3).optional(),
-    category: z.string().min(1).optional(),
-    images: z.array(z.string().url()).min(1).optional(),
-    preparationTime: z.number().int().min(1).optional(),
-    ingredients: z.array(z.string()).optional(),
-    allergens: z.array(z.string()).optional(),
-    nutritionalInfo: nutritionalInfoSchema,
-    isAvailable: z.boolean().optional(),
-    isFeatured: z.boolean().optional(),
-  }),
+  body: z
+    .object({
+      name: z.string().min(1).max(150).optional(),
+      description: z.string().min(1).max(1000).optional(),
+      price: z
+        .union([z.number(), z.string()])
+        .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
+        .pipe(z.number().min(0))
+        .optional(),
+      currency: z.string().length(3).optional(),
+      category: z.string().min(1).optional(),
+      preparationTime: z
+        .union([z.number(), z.string()])
+        .transform((val) =>
+          typeof val === "string" ? parseInt(val, 10) : val,
+        )
+        .pipe(z.number().int().min(1))
+        .optional(),
+      ingredients: z
+        .union([z.array(z.string()), z.string()])
+        .transform((val) =>
+          typeof val === "string" ? JSON.parse(val) : val,
+        )
+        .pipe(z.array(z.string()))
+        .optional(),
+      allergens: z
+        .union([z.array(z.string()), z.string()])
+        .transform((val) =>
+          typeof val === "string" ? JSON.parse(val) : val,
+        )
+        .pipe(z.array(z.string()))
+        .optional(),
+      nutritionalInfo: z
+        .union([nutritionalInfoSchema, z.string()])
+        .transform((val) =>
+          typeof val === "string" ? JSON.parse(val) : val,
+        )
+        .optional(),
+      isAvailable: z
+        .union([z.boolean(), z.string()])
+        .transform((val) => (typeof val === "string" ? val === "true" : val))
+        .optional(),
+      isFeatured: z
+        .union([z.boolean(), z.string()])
+        .transform((val) => (typeof val === "string" ? val === "true" : val))
+        .optional(),
+    })
+    .default({}),
 });
 
 export const menuItemQuerySchema = z.object({
