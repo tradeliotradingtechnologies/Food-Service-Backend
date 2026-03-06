@@ -103,6 +103,7 @@ export const sendEmailVerification = async (
 ): Promise<string | null> => {
   const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
   const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+  console.log("Verification URL:", verificationUrl); // Debug log
   const { subject, html } = templates.emailVerification(name, verificationUrl);
   return sendMail({ to: email, subject, html });
 };
@@ -114,6 +115,7 @@ export const sendPasswordResetEmail = async (
 ): Promise<string | null> => {
   const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+  console.log("Password Reset URL:", resetUrl); // Debug log
   const { subject, html } = templates.passwordReset(name, resetUrl);
   return sendMail({ to: email, subject, html });
 };

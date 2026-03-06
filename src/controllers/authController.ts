@@ -145,9 +145,16 @@ export const login = catchAsync(
       "+password",
     );
 
-    if (!user || user.authMethod === "google" || user.authMethod === "apple") {
+    if (!user) {
+      return next(new AppError("Incorrect email or password", 401));
+    }
+
+    if (user.authMethod === "google" || user.authMethod === "apple") {
       return next(
-        new AppError("Invalid credentials or use OAuth to sign in", 401),
+        new AppError(
+          `This account uses ${user.authMethod} sign-in. Please log in with ${user.authMethod}.`,
+          401,
+        ),
       );
     }
 
@@ -319,6 +326,7 @@ export const googleAuth = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { idToken } = req.body;
 
+    console.log(idToken);
     if (!idToken) {
       return next(new AppError("Google ID token is required", 400));
     }
@@ -763,13 +771,22 @@ export const updatePassword = catchAsync(
 
 export const updateProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { name, phoneNumber, avatar } = req.body;
+    const { name, phoneNumber } = req.body;
 
     // Build update object — only include fields that were provided
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-    if (avatar !== undefined) updateData.avatar = avatar;
+
+    // Handle avatar file upload
+    if (req.file) {
+      const { processAndUpload } = await import("../services/imageService.js");
+      const result = await processAndUpload(req.file.buffer, {
+        preset: "avatar",
+        folder: "ericas-kitchen/avatars",
+      });
+      updateData.avatar = result.url;
+    }
 
     if (Object.keys(updateData).length === 0) {
       return next(new AppError("No fields to update", 400));

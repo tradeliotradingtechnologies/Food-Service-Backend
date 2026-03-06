@@ -89,14 +89,15 @@ export const appleAuthSchema = z.object({
 // ── Update Profile ──────────────────────────────────────────────
 
 export const updateProfileSchema = z.object({
-  body: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters").optional(),
-    phoneNumber: z
-      .string()
-      .regex(/^\+?[0-9]{7,15}$/, "Phone number must contain 7 to 15 digits")
-      .optional(),
-    avatar: z.string().url("Avatar must be a valid URL").optional(),
-  }),
+  body: z
+    .object({
+      name: z.string().min(2, "Name must be at least 2 characters").optional(),
+      phoneNumber: z
+        .string()
+        .regex(/^\+?[0-9]{7,15}$/, "Phone number must contain 7 to 15 digits")
+        .optional(),
+    })
+    .default({}),
 });
 
 // ── Update Password (authenticated) ────────────────────────────

@@ -23,7 +23,12 @@ interface MongooseValidationError extends Error {
 }
 
 interface ZodValidationError extends Error {
-  issues: { path: (string | number)[]; message: string }[];
+  issues: {
+    code: string;
+    expected?: string;
+    path: (string | number)[];
+    message: string;
+  }[];
 }
 
 // ── DB-Level Error Handlers ─────────────────────────────────────
@@ -74,10 +79,7 @@ const handleVersionError = (): AppError => {
  * Triggered when strict mode is on and an unknown field is passed.
  */
 const handleStrictModeError = (err: Error): AppError => {
-  return new AppError(
-    `Unknown field in request. ${err.message}`,
-    400,
-  );
+  return new AppError(`Unknown field in request. ${err.message}`, 400);
 };
 
 // ── Auth / Token Error Handlers ─────────────────────────────────
@@ -92,10 +94,7 @@ const handleJWTError = (): AppError =>
  * JWT — token has expired
  */
 const handleJWTExpiredError = (): AppError =>
-  new AppError(
-    "Your session has expired. Please log in again.",
-    401,
-  );
+  new AppError("Your session has expired. Please log in again.", 401);
 
 // ── Zod Validation Error Handler ────────────────────────────────
 
@@ -104,9 +103,24 @@ const handleJWTExpiredError = (): AppError =>
  * Extracts field-level errors into a clean message.
  */
 const handleZodError = (err: ZodValidationError): AppError => {
-  const errors = err.issues.map(
-    (issue) => `${issue.path.join(".")} — ${issue.message}`,
-  );
+  const errors = err.issues.map((issue) => {
+    // Strip internal wrapper segments (body / query / params) from path
+    const cleanPath = issue.path
+      .filter((seg) => !["body", "query", "params"].includes(String(seg)))
+      .join(".");
+
+    // When the field is completely missing, show "<field> is required"
+    // instead of the raw Zod type message ("Expected string, received undefined")
+    if (
+      issue.code === "invalid_type" &&
+      issue.message.includes("received undefined")
+    ) {
+      return `${cleanPath || "value"} is required`;
+    }
+
+    return cleanPath ? `${cleanPath} — ${issue.message}` : issue.message;
+  });
+
   const message = `Validation failed: ${errors.join(". ")}`;
   return new AppError(message, 400);
 };
@@ -116,7 +130,10 @@ const handleZodError = (err: ZodValidationError): AppError => {
 /**
  * Development: return everything for debugging (full error object, stack trace)
  */
-const sendErrorDev = (err: AppError & { [key: string]: any }, res: Response) => {
+const sendErrorDev = (
+  err: AppError & { [key: string]: any },
+  res: Response,
+) => {
   res.status(err.statusCode).json({
     status: err.status,
     error: err,
@@ -156,17 +173,24 @@ const globalErrorHandler = (
   res: Response,
   _next: NextFunction,
 ) => {
-  // Defaults
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || "error";
+  // Safely read defaults without mutating the original error object,
+  // which may have getter-only properties (e.g. Mongoose/Zod errors).
+  const statusCode: number = err.statusCode || 500;
+  const status: string = err.status || "error";
 
   if (process.env.NODE_ENV === "development") {
-    sendErrorDev(err, res);
+    // Wrap in a plain object so sendErrorDev always has statusCode/status
+    const devErr = {
+      ...err,
+      statusCode,
+      status,
+      message: err.message,
+      stack: err.stack,
+    };
+    sendErrorDev(devErr, res);
   } else {
-    // Clone error so we don't mutate the original
-    let error = Object.create(err);
-    error.message = err.message;
-    error.name = err.name;
+    // Start with a default production error; handlers below override it
+    let error: AppError | null = null;
 
     // ── Mongoose / MongoDB Errors ────────────────────────────
     if (err.name === "CastError") {
@@ -187,16 +211,31 @@ const globalErrorHandler = (
 
     // ── Mongoose connection / timeout errors ─────────────────
     if (err.name === "MongoServerError" && err.code !== 11000) {
-      error = new AppError("A database error occurred. Please try again later.", 500);
+      error = new AppError(
+        "A database error occurred. Please try again later.",
+        500,
+      );
     }
     if (err.name === "MongooseServerSelectionError") {
-      error = new AppError("Unable to connect to the database. Please try again later.", 503);
+      error = new AppError(
+        "Unable to connect to the database. Please try again later.",
+        503,
+      );
     }
     if (err.name === "MongoNetworkError") {
-      error = new AppError("Network error connecting to database. Please try again later.", 503);
+      error = new AppError(
+        "Network error connecting to database. Please try again later.",
+        503,
+      );
     }
-    if (err.name === "MongoTimeoutError" || err.name === "MongoServerSelectionError") {
-      error = new AppError("Database request timed out. Please try again.", 504);
+    if (
+      err.name === "MongoTimeoutError" ||
+      err.name === "MongoServerSelectionError"
+    ) {
+      error = new AppError(
+        "Database request timed out. Please try again.",
+        504,
+      );
     }
 
     // ── JWT Errors ───────────────────────────────────────────
@@ -231,6 +270,12 @@ const globalErrorHandler = (
     // ── CORS Error ───────────────────────────────────────────
     if (err.message?.includes("Not allowed by CORS")) {
       error = new AppError("Cross-origin request blocked.", 403);
+    }
+
+    // If no handler matched, wrap the original error as-is
+    if (!error) {
+      error = new AppError(err.message || "Something went wrong.", statusCode);
+      error.isOperational = err.isOperational ?? false;
     }
 
     sendErrorProd(error, res);

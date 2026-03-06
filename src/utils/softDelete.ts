@@ -1,9 +1,4 @@
-import {
-  Schema,
-  Query,
-  Aggregate,
-  CallbackWithoutResultAndOptionalError,
-} from "mongoose";
+import { Schema, Query, Aggregate } from "mongoose";
 
 /**
  * Mongoose plugin that adds soft-delete support to any schema.
@@ -38,41 +33,27 @@ export function softDeletePlugin(schema: Schema): void {
   ];
 
   for (const hook of queryHooks) {
-    schema.pre(
-      hook as any,
-      function (
-        this: Query<any, any>,
-        next: CallbackWithoutResultAndOptionalError,
-      ) {
-        const filter = this.getFilter();
-        // Only add the filter if the query doesn't already mention deletedAt
-        if (filter.deletedAt === undefined) {
-          this.where({ deletedAt: null });
-        }
-        next();
-      },
-    );
+    schema.pre(hook as any, function (this: Query<any, any>) {
+      const filter = this.getFilter();
+      // Only add the filter if the query doesn't already mention deletedAt
+      if (filter.deletedAt === undefined) {
+        this.where({ deletedAt: null });
+      }
+    });
   }
 
   // ── 3. Aggregate middleware ─────────────────────────────────────
-  schema.pre(
-    "aggregate" as any,
-    function (
-      this: Aggregate<any>,
-      next: CallbackWithoutResultAndOptionalError,
-    ) {
-      const pipeline = this.pipeline();
-      // Check if $match with deletedAt already exists in the first stage
-      const firstStage = pipeline[0] as any;
-      const hasDeletedAtMatch =
-        firstStage?.$match && firstStage.$match.deletedAt !== undefined;
+  schema.pre("aggregate" as any, function (this: Aggregate<any>) {
+    const pipeline = this.pipeline();
+    // Check if $match with deletedAt already exists in the first stage
+    const firstStage = pipeline[0] as any;
+    const hasDeletedAtMatch =
+      firstStage?.$match && firstStage.$match.deletedAt !== undefined;
 
-      if (!hasDeletedAtMatch) {
-        this.pipeline().unshift({ $match: { deletedAt: null } });
-      }
-      next();
-    },
-  );
+    if (!hasDeletedAtMatch) {
+      this.pipeline().unshift({ $match: { deletedAt: null } });
+    }
+  });
 
   // ── 4. Instance method ──────────────────────────────────────────
   schema.methods.softDelete = function () {
