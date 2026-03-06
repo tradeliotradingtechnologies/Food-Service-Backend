@@ -25,23 +25,17 @@ export const createMenuItemSchema = z.object({
       .pipe(z.number().int().min(1, "Preparation time is required")),
     ingredients: z
       .union([z.array(z.string()), z.string()])
-      .transform((val) =>
-        typeof val === "string" ? JSON.parse(val) : val,
-      )
+      .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
       .pipe(z.array(z.string()))
       .optional(),
     allergens: z
       .union([z.array(z.string()), z.string()])
-      .transform((val) =>
-        typeof val === "string" ? JSON.parse(val) : val,
-      )
+      .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
       .pipe(z.array(z.string()))
       .optional(),
     nutritionalInfo: z
       .union([nutritionalInfoSchema, z.string()])
-      .transform((val) =>
-        typeof val === "string" ? JSON.parse(val) : val,
-      )
+      .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
       .optional(),
     isAvailable: z
       .union([z.boolean(), z.string()])
@@ -69,30 +63,22 @@ export const updateMenuItemSchema = z.object({
       category: z.string().min(1).optional(),
       preparationTime: z
         .union([z.number(), z.string()])
-        .transform((val) =>
-          typeof val === "string" ? parseInt(val, 10) : val,
-        )
+        .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))
         .pipe(z.number().int().min(1))
         .optional(),
       ingredients: z
         .union([z.array(z.string()), z.string()])
-        .transform((val) =>
-          typeof val === "string" ? JSON.parse(val) : val,
-        )
+        .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
         .pipe(z.array(z.string()))
         .optional(),
       allergens: z
         .union([z.array(z.string()), z.string()])
-        .transform((val) =>
-          typeof val === "string" ? JSON.parse(val) : val,
-        )
+        .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
         .pipe(z.array(z.string()))
         .optional(),
       nutritionalInfo: z
         .union([nutritionalInfoSchema, z.string()])
-        .transform((val) =>
-          typeof val === "string" ? JSON.parse(val) : val,
-        )
+        .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
         .optional(),
       isAvailable: z
         .union([z.boolean(), z.string()])
