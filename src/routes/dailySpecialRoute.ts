@@ -12,7 +12,8 @@ const router = Router();
 
 // ── Public ──────────────────────────────────────────────────────
 router.get("/today", ctrl.getTodaySpecials);
-router.get("/", ctrl.getDailySpecialsByDate);
+router.get("/by-date", ctrl.getDailySpecialsByDate);
+router.get("/", ctrl.getAllDailySpecials);
 router.get("/:id", validate(paramIdSchema), ctrl.getDailySpecialById);
 
 // ── Admin / Staff ───────────────────────────────────────────────

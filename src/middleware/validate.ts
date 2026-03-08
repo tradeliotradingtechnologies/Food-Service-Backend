@@ -6,7 +6,7 @@ const validate =
   (schema: ZodType) => (req: Request, _res: Response, next: NextFunction) => {
     try {
       schema.parse({
-        body: req.body,
+        body: req.body ?? {},
         query: req.query,
         params: req.params,
       });

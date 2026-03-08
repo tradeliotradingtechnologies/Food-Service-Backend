@@ -26,6 +26,17 @@ export const getTodaySpecials = catchAsync(
   },
 );
 
+export const getAllDailySpecials = catchAsync(
+  async (_req: Request, res: Response) => {
+    const specials = await dailySpecialService.getAllDailySpecials();
+    res.status(200).json({
+      status: "success",
+      results: specials.length,
+      data: { dailySpecials: specials },
+    });
+  },
+);
+
 export const getDailySpecialsByDate = catchAsync(
   async (req: Request, res: Response) => {
     const date = new Date(req.query.date as string);

@@ -25,6 +25,15 @@ export const getTodaySpecials = async () => {
     .sort({ sortOrder: 1 });
 };
 
+export const getAllDailySpecials = async () => {
+  return DailySpecial.find()
+    .populate({
+      path: "menuItem",
+      populate: { path: "category", select: "name slug" },
+    })
+    .sort({ date: -1, sortOrder: 1 });
+};
+
 export const getDailySpecialsByDate = async (date: Date) => {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);

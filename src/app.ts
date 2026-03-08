@@ -128,21 +128,21 @@ app.get("/health", (_req, res) => {
 });
 
 // ── API Routes ──────────────────────────────────────────────────
-app.use("/api/auth", userRoute);
-app.use("/api/categories", categoryRoute);
-app.use("/api/menu-items", menuItemRoute);
-app.use("/api/daily-specials", dailySpecialRoute);
-app.use("/api/addresses", addressRoute);
-app.use("/api/cart", cartRoute);
-app.use("/api/orders", orderRoute);
-app.use("/api/payments", paymentRoute);
-app.use("/api/testimonials", testimonialRoute);
-app.use("/api/likes", menuItemLikeRoute);
-app.use("/api/newsletter", newsletterRoute);
-app.use("/api/admin", adminRoute);
-app.use("/api/analytics", analyticsRoute);
-app.use("/api/reservations", reservationRoute);
-app.use("/api/uploads", uploadRoute);
+app.use("/api/v1/auth", userRoute);
+app.use("/api/v1/categories", categoryRoute);
+app.use("/api/v1/menu-items", menuItemRoute);
+app.use("/api/v1/daily-specials", dailySpecialRoute);
+app.use("/api/v1/addresses", addressRoute);
+app.use("/api/v1/cart", cartRoute);
+app.use("/api/v1/orders", orderRoute);
+app.use("/api/v1/payments", paymentRoute);
+app.use("/api/v1/testimonials", testimonialRoute);
+app.use("/api/v1/likes", menuItemLikeRoute);
+app.use("/api/v1/newsletter", newsletterRoute);
+app.use("/api/v1/admin", adminRoute);
+app.use("/api/v1/analytics", analyticsRoute);
+app.use("/api/v1/reservations", reservationRoute)
+app.use("/api/v1/uploads", uploadRoute);
 
 // ── 404 Catch-All ───────────────────────────────────────────────
 app.all("*path", (req, _res, next) => {
