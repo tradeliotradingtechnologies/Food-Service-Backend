@@ -65,7 +65,7 @@ export const updateTestimonial = async (
   const testimonial = await Testimonial.findOneAndUpdate(
     { _id: id, user: userId },
     data,
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   );
   if (!testimonial) throw new AppError("Testimonial not found", 404);
   return testimonial;
@@ -82,7 +82,7 @@ export const moderateTestimonial = async (
   }
 
   const testimonial = await Testimonial.findByIdAndUpdate(id, updateData, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!testimonial) throw new AppError("Testimonial not found", 404);
@@ -96,7 +96,7 @@ export const deleteTestimonial = async (id: string, userId?: string) => {
   const testimonial = await Testimonial.findOneAndUpdate(
     filter,
     { deletedAt: new Date() },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!testimonial) throw new AppError("Testimonial not found", 404);
   return testimonial;

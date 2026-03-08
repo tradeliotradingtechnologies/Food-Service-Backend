@@ -11,7 +11,7 @@ const dailySpecialSchema = new Schema<IDailySpecial>(
       ref: "MenuItem",
       required: true,
     },
-    date: { type: Date, required: true },
+    date: { type: Date, required: true, default: () => new Date() },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },

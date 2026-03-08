@@ -109,7 +109,7 @@ export const updateReservation = async (
   if (data.date) updateData.date = new Date(data.date);
 
   const reservation = await Reservation.findByIdAndUpdate(id, updateData, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
 
@@ -202,7 +202,7 @@ export const deleteReservation = async (id: string) => {
   const reservation = await Reservation.findByIdAndUpdate(
     id,
     { deletedAt: new Date() },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!reservation) {
     throw new AppError("Reservation not found", 404);

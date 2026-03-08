@@ -123,7 +123,7 @@ export const updateProfile = async (
   data: { name?: string; phoneNumber?: string; avatar?: string },
 ) => {
   const user = await User.findByIdAndUpdate(userId, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   })
     .populate("role", "name")

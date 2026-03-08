@@ -45,7 +45,7 @@ export const updateAddress = async (
   const address = await Address.findOneAndUpdate(
     { _id: id, user: userId },
     data,
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   );
   if (!address) throw new AppError("Address not found", 404);
   return address;
@@ -55,7 +55,7 @@ export const deleteAddress = async (id: string, userId: string) => {
   const address = await Address.findOneAndUpdate(
     { _id: id, user: userId },
     { deletedAt: new Date() },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!address) throw new AppError("Address not found", 404);
 

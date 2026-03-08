@@ -39,7 +39,7 @@ export const updateCategory = async (
   }>,
 ) => {
   const category = await Category.findByIdAndUpdate(id, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!category) throw new AppError("Category not found", 404);
@@ -50,7 +50,7 @@ export const deleteCategory = async (id: string) => {
   const category = await Category.findByIdAndUpdate(
     id,
     { deletedAt: new Date() },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!category) throw new AppError("Category not found", 404);
   return category;

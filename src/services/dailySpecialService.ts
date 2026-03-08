@@ -61,7 +61,7 @@ export const updateDailySpecial = async (
   data: Record<string, any>,
 ) => {
   const special = await DailySpecial.findByIdAndUpdate(id, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).populate("menuItem");
   if (!special) throw new AppError("Daily special not found", 404);
@@ -72,7 +72,7 @@ export const deleteDailySpecial = async (id: string) => {
   const special = await DailySpecial.findByIdAndUpdate(
     id,
     { deletedAt: new Date() },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!special) throw new AppError("Daily special not found", 404);
   return special;

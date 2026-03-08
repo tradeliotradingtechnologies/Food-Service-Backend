@@ -793,7 +793,7 @@ export const updateProfile = catchAsync(
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }).populate("role", "name");
 

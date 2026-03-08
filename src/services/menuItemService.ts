@@ -99,7 +99,7 @@ export const getMenuItemBySlug = async (slug: string) => {
 
 export const updateMenuItem = async (id: string, data: Record<string, any>) => {
   const item = await MenuItem.findByIdAndUpdate(id, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).populate("category", "name slug");
   if (!item) throw new AppError("Menu item not found", 404);
@@ -110,7 +110,7 @@ export const deleteMenuItem = async (id: string) => {
   const item = await MenuItem.findByIdAndUpdate(
     id,
     { deletedAt: new Date() },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!item) throw new AppError("Menu item not found", 404);
   return item;
