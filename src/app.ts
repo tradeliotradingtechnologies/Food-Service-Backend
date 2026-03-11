@@ -12,6 +12,7 @@ import rateLimit from "express-rate-limit";
 import mongoSanitize from "./middleware/mongoSanitize.js";
 import hpp from "hpp";
 import compression from "compression";
+import { requireApiKey } from "./middleware/apiKey.js";
 
 // ── Route imports ─────────────────────────────────────────────
 import userRoute from "./routes/userRoute.js";
@@ -100,7 +101,14 @@ app.use(
 );
 
 // ── Body Parsing & Cookies ──────────────────────────────────────
-app.use(express.json({ limit: "10kb" }));
+// Skip JSON parsing for the Paystack webhook — it needs the raw body
+// for HMAC signature verification (handled in the route itself).
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/v1/payments/webhook/paystack") {
+    return next();
+  }
+  express.json({ limit: "10kb" })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
@@ -127,6 +135,11 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// ── API Key Gate ────────────────────────────────────────────────
+// Every /api/* request must carry a valid X-API-Key header.
+// The Paystack webhook is exempt — it authenticates via HMAC signature.
+app.use("/api", requireApiKey);
+
 // ── API Routes ──────────────────────────────────────────────────
 app.use("/api/v1/auth", userRoute);
 app.use("/api/v1/categories", categoryRoute);
@@ -141,7 +154,7 @@ app.use("/api/v1/likes", menuItemLikeRoute);
 app.use("/api/v1/newsletter", newsletterRoute);
 app.use("/api/v1/admin", adminRoute);
 app.use("/api/v1/analytics", analyticsRoute);
-app.use("/api/v1/reservations", reservationRoute)
+app.use("/api/v1/reservations", reservationRoute);
 app.use("/api/v1/uploads", uploadRoute);
 
 // ── 404 Catch-All ───────────────────────────────────────────────

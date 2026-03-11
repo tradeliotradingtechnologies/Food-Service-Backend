@@ -3,16 +3,20 @@
 > **Version**: 1.0.0  
 > **Base URL**: `http://localhost:3000/api`  
 > **Content-Type**: `application/json`  
-> **Authentication**: HTTP-only cookies (JWT)
+> **Authentication**: API Key + HTTP-only cookies (JWT)  
+> **Payment Provider**: Paystack
+
 ---
 
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [API Key (Service-to-Service Auth)](#api-key-service-to-service-auth)
 - [Authentication & Tokens](#authentication--tokens)
 - [Response Format](#response-format)
 - [Error Handling](#error-handling)
 - [Rate Limiting](#rate-limiting)
+- [Paystack Payments](#paystack-payments)
 - [API Reference](#api-reference)
   - [Auth](#1-auth)
   - [Categories](#2-categories)
@@ -30,6 +34,7 @@
   - [Reservations](#14-reservations)
 - [Enums & Constants](#enums--constants)
 - [Data Models](#data-models)
+- [Environment Variables](#environment-variables)
 
 ---
 
@@ -43,14 +48,57 @@ The API allows requests from the client URL configured on the server (default `h
 // Axios
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = "http://localhost:3000/api";
+axios.defaults.headers.common["X-API-Key"] = "YOUR_API_KEY"; // ← required
 
 // Fetch
 fetch("/api/auth/login", {
   method: "POST",
   credentials: "include", // ← required
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "X-API-Key": "YOUR_API_KEY", // ← required
+  },
   body: JSON.stringify({ email, password }),
 });
+```
+
+---
+
+## API Key (Service-to-Service Auth)
+
+All `/api/*` endpoints require a valid `X-API-Key` header. This is the **first layer of defence** — requests without a valid API key are rejected before JWT auth even runs.
+
+| Header      | Value                                  |
+| ----------- | -------------------------------------- |
+| `X-API-Key` | The shared secret set in `API_KEY` env |
+
+### How It Works
+
+1. The server stores the API key in the `API_KEY` environment variable (min 32 chars)
+2. Every request to `/api/*` must include the `X-API-Key` header
+3. The key is compared using **constant-time comparison** (`crypto.timingSafeEqual`) to prevent timing attacks
+4. If the key is missing or invalid → `401 Unauthorized`
+5. If `API_KEY` is not configured on the server → `500 Server Error` (fail closed)
+
+### Exempt Endpoints
+
+The following endpoints are **exempt** from API key checks because they use their own authentication mechanism:
+
+| Endpoint                                 | Auth Method          |
+| ---------------------------------------- | -------------------- |
+| `POST /api/v1/payments/webhook/paystack` | Paystack HMAC-SHA512 |
+
+### Generate an API Key
+
+```bash
+# Generate a secure 64-character hex key
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Add it to your `.env`:
+
+```
+API_KEY=your_generated_key_here
 ```
 
 ---
@@ -224,6 +272,56 @@ try {
 | Login / Signup / Forgot Password | 20 requests  | 15 minutes |
 
 When exceeded, the API returns `429 Too Many Requests`.
+
+---
+
+## Paystack Payments
+
+The API integrates with **Paystack** for secure online payments (cards, mobile money). All Paystack-specific security measures are built in.
+
+### Payment Flow
+
+```
+1. Frontend:  POST /api/v1/payments/paystack/initialize  { orderId }
+2. Server:    Creates payment record, calls Paystack → returns authorizationUrl
+3. Frontend:  Redirects user to authorizationUrl (Paystack checkout page)
+4. User:      Completes payment on Paystack
+5. Paystack:  Redirects back to callbackUrl + sends webhook to server
+6. Server:    Webhook verifies signature, updates payment & order status
+7. Frontend:  GET /api/v1/payments/paystack/verify/:reference  (optional polling)
+```
+
+### Security Measures
+
+| Measure                         | Implementation                                                           |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| **HMAC Signature Verification** | Every webhook is verified with SHA-512 HMAC using your secret key        |
+| **Raw Body Parsing**            | Webhook route uses `express.raw()` to preserve bytes for HMAC check      |
+| **API Key Exemption**           | Webhook bypasses API key check (uses its own HMAC auth)                  |
+| **Auth Exemption**              | Webhook bypasses JWT auth (server-to-server, not user-initiated)         |
+| **Idempotent Processing**       | Duplicate webhook events are handled gracefully (won't double-charge)    |
+| **Amount in Pesewas**           | All amounts sent to Paystack are in the smallest currency unit           |
+| **Server-side Verification**    | Payment status is always verified server-side, never trusted from client |
+| **Fail Closed**                 | Missing Paystack config → requests are rejected                          |
+
+### Webhook Events Handled
+
+| Event              | Action                                     |
+| ------------------ | ------------------------------------------ |
+| `charge.success`   | Marks payment as successful, order as paid |
+| `charge.failed`    | Marks payment as failed                    |
+| `refund.processed` | Marks payment as refunded                  |
+
+### Paystack Environment Variables
+
+```
+PAYSTACK_SECRET_KEY=sk_test_xxxxx        # Required — your Paystack secret key
+PAYSTACK_PUBLIC_KEY=pk_test_xxxxx        # Optional — for frontend reference
+PAYSTACK_WEBHOOK_SECRET=xxxxx            # Optional — for additional webhook validation
+PAYSTACK_CALLBACK_URL=https://...        # Optional — default redirect after payment
+```
+
+> **Never expose `PAYSTACK_SECRET_KEY` to the frontend.** Only the public key should be used client-side.
 
 ---
 
@@ -1067,17 +1165,80 @@ Assign a delivery rider to an order.
 
 ### 8. Payments
 
-Base path: `/api/payments` — 🔒 All routes require auth
+Base path: `/api/payments`
 
-#### POST `/payments`
+#### POST `/payments/paystack/initialize` 🔒 Auth
 
-Initiate a payment for an order.
+Initialize a Paystack payment. Returns a checkout URL to redirect the user to.
+
+| Field         | Type   | Required | Rules                            |
+| ------------- | ------ | :------: | -------------------------------- |
+| `orderId`     | string |    ✅    | Order ObjectId                   |
+| `callbackUrl` | string |    —     | URL to redirect to after payment |
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "data": {
+    "payment": {
+      "_id": "...",
+      "order": "...",
+      "amount": 100.0,
+      "currency": "GHS",
+      "method": "card",
+      "provider": "paystack",
+      "providerRef": "EK-orderId-1234567890",
+      "status": "pending",
+      "createdAt": "2026-03-03T..."
+    },
+    "authorizationUrl": "https://checkout.paystack.com/xxxxx",
+    "accessCode": "xxxxx",
+    "reference": "EK-orderId-1234567890"
+  }
+}
+```
+
+> Redirect the user to `authorizationUrl` to complete payment.
+
+---
+
+#### GET `/payments/paystack/verify/:reference` 🔒 Auth
+
+Verify a Paystack payment after redirect. Use this as a fallback if the webhook hasn't processed yet.
+
+| Param       | Type   | Description                    |
+| ----------- | ------ | ------------------------------ |
+| `reference` | string | Paystack transaction reference |
+
+**Response** `200` — `{ data: { payment: { ... } } }`
+
+---
+
+#### POST `/payments/webhook/paystack`
+
+Paystack webhook endpoint. **No API key or JWT required** — authenticated via HMAC-SHA512 signature.
+
+> This endpoint is called by Paystack servers. Do not call it from your frontend.
+
+| Header                 | Description                          |
+| ---------------------- | ------------------------------------ |
+| `x-paystack-signature` | HMAC-SHA512 hash of the request body |
+
+**Response** `200` — Always returns `200` to acknowledge receipt.
+
+---
+
+#### POST `/payments` 🔒 Auth
+
+Initiate a generic (non-Paystack) payment for an order.
 
 | Field      | Type   | Required | Rules                                          |
 | ---------- | ------ | :------: | ---------------------------------------------- |
 | `orderId`  | string |    ✅    | Order ObjectId                                 |
 | `method`   | string |    ✅    | `mobile_money` \| `card` \| `cash_on_delivery` |
-| `provider` | string |    —     | e.g. `MTN MoMo`, `Paystack`                    |
+| `provider` | string |    —     | e.g. `MTN MoMo`                                |
 
 **Response** `201`
 
@@ -1101,7 +1262,7 @@ Initiate a payment for an order.
 
 ---
 
-#### GET `/payments/my`
+#### GET `/payments/my` 🔒 Auth
 
 Get the current user's payment history.
 
@@ -1109,7 +1270,7 @@ Get the current user's payment history.
 
 ---
 
-#### GET `/payments/order/:orderId`
+#### GET `/payments/order/:orderId` 🔒 Auth
 
 Get payment for a specific order.
 
@@ -1140,7 +1301,7 @@ Mark a payment as failed.
 
 #### POST `/payments/:id/refund` 🔐 `payment:update`
 
-Refund a payment.
+Refund a payment. For Paystack payments, the refund is initiated via the Paystack API. For other payments, the status is updated locally.
 
 | Field    | Type   | Required | Rules                              |
 | -------- | ------ | :------: | ---------------------------------- |
@@ -2080,118 +2241,158 @@ pending → confirmed → seated → completed
 
 ## Quick Reference — All Endpoints
 
-| Method | Path                           | Auth | Permission             |
-| :----: | ------------------------------ | :--: | ---------------------- |
-|  POST  | `/auth/signup`                 |  —   | —                      |
-|  POST  | `/auth/login`                  |  —   | —                      |
-|  POST  | `/auth/google`                 |  —   | —                      |
-|  POST  | `/auth/apple`                  |  —   | —                      |
-|  POST  | `/auth/refresh`                |  —   | —                      |
-|  POST  | `/auth/logout`                 |  —   | —                      |
-|  GET   | `/auth/verify-email/:token`    |  —   | —                      |
-|  POST  | `/auth/forgot-password`        |  —   | —                      |
-| PATCH  | `/auth/reset-password/:token`  |  —   | —                      |
-|  GET   | `/auth/me`                     |  🔒  | —                      |
-| PATCH  | `/auth/update-password`        |  🔒  | —                      |
-| PATCH  | `/auth/update-profile`         |  🔒  | —                      |
-|        |                                |      |                        |
-|  GET   | `/categories`                  |  —   | —                      |
-|  GET   | `/categories/:id`              |  —   | —                      |
-|  GET   | `/categories/slug/:slug`       |  —   | —                      |
-|  POST  | `/categories`                  |  🔒  | `category:create`      |
-| PATCH  | `/categories/:id`              |  🔒  | `category:update`      |
-| DELETE | `/categories/:id`              |  🔒  | `category:delete`      |
-|        |                                |      |                        |
-|  GET   | `/menu-items`                  |  —   | —                      |
-|  GET   | `/menu-items/:id`              |  —   | —                      |
-|  GET   | `/menu-items/slug/:slug`       |  —   | —                      |
-|  POST  | `/menu-items`                  |  🔒  | `menu:create`          |
-| PATCH  | `/menu-items/:id`              |  🔒  | `menu:update`          |
-| DELETE | `/menu-items/:id`              |  🔒  | `menu:delete`          |
-|        |                                |      |                        |
-|  GET   | `/daily-specials/today`        |  —   | —                      |
-|  GET   | `/daily-specials`              |  —   | —                      |
-|  GET   | `/daily-specials/:id`          |  —   | —                      |
-|  POST  | `/daily-specials`              |  🔒  | `daily_special:create` |
-| PATCH  | `/daily-specials/:id`          |  🔒  | `daily_special:update` |
-| DELETE | `/daily-specials/:id`          |  🔒  | `daily_special:delete` |
-|        |                                |      |                        |
-|  GET   | `/addresses`                   |  🔒  | —                      |
-|  GET   | `/addresses/:id`               |  🔒  | —                      |
-|  POST  | `/addresses`                   |  🔒  | —                      |
-| PATCH  | `/addresses/:id`               |  🔒  | —                      |
-| DELETE | `/addresses/:id`               |  🔒  | —                      |
-|        |                                |      |                        |
-|  GET   | `/cart`                        |  🔒  | —                      |
-|  POST  | `/cart/items`                  |  🔒  | —                      |
-| PATCH  | `/cart/items/:menuItemId`      |  🔒  | —                      |
-| DELETE | `/cart/items/:menuItemId`      |  🔒  | —                      |
-| DELETE | `/cart`                        |  🔒  | —                      |
-|        |                                |      |                        |
-|  POST  | `/orders`                      |  🔒  | —                      |
-|  GET   | `/orders/my`                   |  🔒  | —                      |
-|  GET   | `/orders/:id`                  |  🔒  | —                      |
-|  POST  | `/orders/:id/cancel`           |  🔒  | —                      |
-|  GET   | `/orders`                      |  🔒  | `order:read`           |
-| PATCH  | `/orders/:id/status`           |  🔒  | `order:update`         |
-| PATCH  | `/orders/:id/assign-rider`     |  🔒  | `order:update`         |
-|        |                                |      |                        |
-|  POST  | `/payments`                    |  🔒  | —                      |
-|  GET   | `/payments/my`                 |  🔒  | —                      |
-|  GET   | `/payments/order/:orderId`     |  🔒  | —                      |
-| PATCH  | `/payments/:id/confirm`        |  🔒  | `payment:update`       |
-| PATCH  | `/payments/:id/fail`           |  🔒  | `payment:update`       |
-|  POST  | `/payments/:id/refund`         |  🔒  | `payment:update`       |
-|        |                                |      |                        |
-|  GET   | `/testimonials/approved`       |  —   | —                      |
-|  GET   | `/testimonials/featured`       |  —   | —                      |
-|  POST  | `/testimonials`                |  🔒  | —                      |
-|  GET   | `/testimonials/my`             |  🔒  | —                      |
-| PATCH  | `/testimonials/:id`            |  🔒  | —                      |
-| DELETE | `/testimonials/:id`            |  🔒  | —                      |
-|  GET   | `/testimonials`                |  🔒  | `testimonial:read`     |
-| PATCH  | `/testimonials/:id/moderate`   |  🔒  | `testimonial:update`   |
-|        |                                |      |                        |
-|  GET   | `/likes`                       |  🔒  | —                      |
-|  POST  | `/likes/:menuItemId`           |  🔒  | —                      |
-|  GET   | `/likes/:menuItemId/status`    |  🔒  | —                      |
-|        |                                |      |                        |
-|  POST  | `/newsletter/subscribe`        |  —   | —                      |
-|  POST  | `/newsletter/unsubscribe`      |  —   | —                      |
-|  GET   | `/newsletter`                  |  🔒  | `newsletter:read`      |
-|  GET   | `/newsletter/count`            |  🔒  | `newsletter:read`      |
-|        |                                |      |                        |
-|  GET   | `/admin/profile`               |  🔒  | —                      |
-| PATCH  | `/admin/profile`               |  🔒  | —                      |
-|  GET   | `/admin/profile/providers`     |  🔒  | —                      |
-|  GET   | `/admin/users`                 |  🔒  | `user:read`            |
-|  GET   | `/admin/users/:id`             |  🔒  | `user:read`            |
-| PATCH  | `/admin/users/:id`             |  🔒  | `user:update`          |
-| DELETE | `/admin/users/:id`             |  🔒  | `user:delete`          |
-|  GET   | `/admin/roles`                 |  🔒  | `setting:read`         |
-|  GET   | `/admin/roles/:id`             |  🔒  | `setting:read`         |
-| PATCH  | `/admin/roles/:id/permissions` |  🔒  | `setting:update`       |
-|  GET   | `/admin/permissions`           |  🔒  | `setting:read`         |
-|  GET   | `/admin/audit-logs`            |  🔒  | `audit_log:read`       |
-|        |                                |      |                        |
-|  GET   | `/analytics/dashboard`         |  🔒  | `report:read`          |
-|  GET   | `/analytics/revenue-chart`     |  🔒  | `report:read`          |
-|  GET   | `/analytics/sales`             |  🔒  | `report:read`          |
-|  GET   | `/analytics/orders`            |  🔒  | `report:read`          |
-|  GET   | `/analytics/customers`         |  🔒  | `report:read`          |
-|  GET   | `/analytics/menu-performance`  |  🔒  | `report:read`          |
-|  GET   | `/analytics/recent-activity`   |  🔒  | `report:read`          |
-|  GET   | `/analytics/reservations`      |  🔒  | `report:read`          |
-|        |                                |      |                        |
-|  POST  | `/reservations`                |  —   | —                      |
-|  GET   | `/reservations/my`             |  🔒  | —                      |
-|  POST  | `/reservations/:id/cancel`     |  🔒  | —                      |
-|  GET   | `/reservations`                |  🔒  | `reservation:read`     |
-|  GET   | `/reservations/upcoming`       |  🔒  | `reservation:read`     |
-|  GET   | `/reservations/:id`            |  🔒  | `reservation:read`     |
-| PATCH  | `/reservations/:id`            |  🔒  | `reservation:update`   |
-| PATCH  | `/reservations/:id/status`     |  🔒  | `reservation:update`   |
-| DELETE | `/reservations/:id`            |  🔒  | `reservation:delete`   |
+| Method | Path                             | Auth | Permission             |
+| :----: | -------------------------------- | :--: | ---------------------- |
+|  POST  | `/auth/signup`                   |  —   | —                      |
+|  POST  | `/auth/login`                    |  —   | —                      |
+|  POST  | `/auth/google`                   |  —   | —                      |
+|  POST  | `/auth/apple`                    |  —   | —                      |
+|  POST  | `/auth/refresh`                  |  —   | —                      |
+|  POST  | `/auth/logout`                   |  —   | —                      |
+|  GET   | `/auth/verify-email/:token`      |  —   | —                      |
+|  POST  | `/auth/forgot-password`          |  —   | —                      |
+| PATCH  | `/auth/reset-password/:token`    |  —   | —                      |
+|  GET   | `/auth/me`                       |  🔒  | —                      |
+| PATCH  | `/auth/update-password`          |  🔒  | —                      |
+| PATCH  | `/auth/update-profile`           |  🔒  | —                      |
+|        |                                  |      |                        |
+|  GET   | `/categories`                    |  —   | —                      |
+|  GET   | `/categories/:id`                |  —   | —                      |
+|  GET   | `/categories/slug/:slug`         |  —   | —                      |
+|  POST  | `/categories`                    |  🔒  | `category:create`      |
+| PATCH  | `/categories/:id`                |  🔒  | `category:update`      |
+| DELETE | `/categories/:id`                |  🔒  | `category:delete`      |
+|        |                                  |      |                        |
+|  GET   | `/menu-items`                    |  —   | —                      |
+|  GET   | `/menu-items/:id`                |  —   | —                      |
+|  GET   | `/menu-items/slug/:slug`         |  —   | —                      |
+|  POST  | `/menu-items`                    |  🔒  | `menu:create`          |
+| PATCH  | `/menu-items/:id`                |  🔒  | `menu:update`          |
+| DELETE | `/menu-items/:id`                |  🔒  | `menu:delete`          |
+|        |                                  |      |                        |
+|  GET   | `/daily-specials/today`          |  —   | —                      |
+|  GET   | `/daily-specials`                |  —   | —                      |
+|  GET   | `/daily-specials/:id`            |  —   | —                      |
+|  POST  | `/daily-specials`                |  🔒  | `daily_special:create` |
+| PATCH  | `/daily-specials/:id`            |  🔒  | `daily_special:update` |
+| DELETE | `/daily-specials/:id`            |  🔒  | `daily_special:delete` |
+|        |                                  |      |                        |
+|  GET   | `/addresses`                     |  🔒  | —                      |
+|  GET   | `/addresses/:id`                 |  🔒  | —                      |
+|  POST  | `/addresses`                     |  🔒  | —                      |
+| PATCH  | `/addresses/:id`                 |  🔒  | —                      |
+| DELETE | `/addresses/:id`                 |  🔒  | —                      |
+|        |                                  |      |                        |
+|  GET   | `/cart`                          |  🔒  | —                      |
+|  POST  | `/cart/items`                    |  🔒  | —                      |
+| PATCH  | `/cart/items/:menuItemId`        |  🔒  | —                      |
+| DELETE | `/cart/items/:menuItemId`        |  🔒  | —                      |
+| DELETE | `/cart`                          |  🔒  | —                      |
+|        |                                  |      |                        |
+|  POST  | `/orders`                        |  🔒  | —                      |
+|  GET   | `/orders/my`                     |  🔒  | —                      |
+|  GET   | `/orders/:id`                    |  🔒  | —                      |
+|  POST  | `/orders/:id/cancel`             |  🔒  | —                      |
+|  GET   | `/orders`                        |  🔒  | `order:read`           |
+| PATCH  | `/orders/:id/status`             |  🔒  | `order:update`         |
+| PATCH  | `/orders/:id/assign-rider`       |  🔒  | `order:update`         |
+|        |                                  |      |                        |
+|  POST  | `/payments/paystack/initialize`  |  🔒  | —                      |
+|  GET   | `/payments/paystack/verify/:ref` |  🔒  | —                      |
+|  POST  | `/payments/webhook/paystack`     |  —   | HMAC signature         |
+|  POST  | `/payments`                      |  🔒  | —                      |
+|  GET   | `/payments/my`                   |  🔒  | —                      |
+|  GET   | `/payments/order/:orderId`       |  🔒  | —                      |
+| PATCH  | `/payments/:id/confirm`          |  🔒  | `payment:update`       |
+| PATCH  | `/payments/:id/fail`             |  🔒  | `payment:update`       |
+|  POST  | `/payments/:id/refund`           |  🔒  | `payment:update`       |
+|        |                                  |      |                        |
+|  GET   | `/testimonials/approved`         |  —   | —                      |
+|  GET   | `/testimonials/featured`         |  —   | —                      |
+|  POST  | `/testimonials`                  |  🔒  | —                      |
+|  GET   | `/testimonials/my`               |  🔒  | —                      |
+| PATCH  | `/testimonials/:id`              |  🔒  | —                      |
+| DELETE | `/testimonials/:id`              |  🔒  | —                      |
+|  GET   | `/testimonials`                  |  🔒  | `testimonial:read`     |
+| PATCH  | `/testimonials/:id/moderate`     |  🔒  | `testimonial:update`   |
+|        |                                  |      |                        |
+|  GET   | `/likes`                         |  🔒  | —                      |
+|  POST  | `/likes/:menuItemId`             |  🔒  | —                      |
+|  GET   | `/likes/:menuItemId/status`      |  🔒  | —                      |
+|        |                                  |      |                        |
+|  POST  | `/newsletter/subscribe`          |  —   | —                      |
+|  POST  | `/newsletter/unsubscribe`        |  —   | —                      |
+|  GET   | `/newsletter`                    |  🔒  | `newsletter:read`      |
+|  GET   | `/newsletter/count`              |  🔒  | `newsletter:read`      |
+|        |                                  |      |                        |
+|  GET   | `/admin/profile`                 |  🔒  | —                      |
+| PATCH  | `/admin/profile`                 |  🔒  | —                      |
+|  GET   | `/admin/profile/providers`       |  🔒  | —                      |
+|  GET   | `/admin/users`                   |  🔒  | `user:read`            |
+|  GET   | `/admin/users/:id`               |  🔒  | `user:read`            |
+| PATCH  | `/admin/users/:id`               |  🔒  | `user:update`          |
+| DELETE | `/admin/users/:id`               |  🔒  | `user:delete`          |
+|  GET   | `/admin/roles`                   |  🔒  | `setting:read`         |
+|  GET   | `/admin/roles/:id`               |  🔒  | `setting:read`         |
+| PATCH  | `/admin/roles/:id/permissions`   |  🔒  | `setting:update`       |
+|  GET   | `/admin/permissions`             |  🔒  | `setting:read`         |
+|  GET   | `/admin/audit-logs`              |  🔒  | `audit_log:read`       |
+|        |                                  |      |                        |
+|  GET   | `/analytics/dashboard`           |  🔒  | `report:read`          |
+|  GET   | `/analytics/revenue-chart`       |  🔒  | `report:read`          |
+|  GET   | `/analytics/sales`               |  🔒  | `report:read`          |
+|  GET   | `/analytics/orders`              |  🔒  | `report:read`          |
+|  GET   | `/analytics/customers`           |  🔒  | `report:read`          |
+|  GET   | `/analytics/menu-performance`    |  🔒  | `report:read`          |
+|  GET   | `/analytics/recent-activity`     |  🔒  | `report:read`          |
+|  GET   | `/analytics/reservations`        |  🔒  | `report:read`          |
+|        |                                  |      |                        |
+|  POST  | `/reservations`                  |  —   | —                      |
+|  GET   | `/reservations/my`               |  🔒  | —                      |
+|  POST  | `/reservations/:id/cancel`       |  🔒  | —                      |
+|  GET   | `/reservations`                  |  🔒  | `reservation:read`     |
+|  GET   | `/reservations/upcoming`         |  🔒  | `reservation:read`     |
+|  GET   | `/reservations/:id`              |  🔒  | `reservation:read`     |
+| PATCH  | `/reservations/:id`              |  🔒  | `reservation:update`   |
+| PATCH  | `/reservations/:id/status`       |  🔒  | `reservation:update`   |
+| DELETE | `/reservations/:id`              |  🔒  | `reservation:delete`   |
+
+---
+
+## Environment Variables
+
+Create a `.env` file in the project root. All required variables must be set for the server to start.
+
+| Variable                  | Required | Default       | Description                                         |
+| ------------------------- | :------: | ------------- | --------------------------------------------------- |
+| `NODE_ENV`                |    —     | `development` | `development` \| `production` \| `test`             |
+| `PORT`                    |    —     | `3000`        | Server port                                         |
+| `DB_URI`                  |    ✅    | —             | MongoDB connection string                           |
+| `JWT_SECRET`              |    ✅    | —             | Min 32 chars — signs access tokens                  |
+| `JWT_REFRESH_SECRET`      |    ✅    | —             | Min 32 chars — signs refresh tokens                 |
+| `JWT_ACCESS_EXPIRES_IN`   |    —     | `15m`         | Access token TTL                                    |
+| `JWT_REFRESH_EXPIRES_IN`  |    —     | `7d`          | Refresh token TTL                                   |
+| `BCRYPT_SALT_ROUNDS`      |    —     | `12`          | Bcrypt cost factor                                  |
+| `API_KEY`                 |    ✅    | —             | Min 32 chars — `X-API-Key` header value             |
+| `CLIENT_URL`              |    —     | —             | Allowed CORS origin(s), comma-separated             |
+| `GOOGLE_CLIENT_ID`        |    —     | —             | Google OAuth client ID                              |
+| `APPLE_CLIENT_ID`         |    —     | —             | Apple Sign-In client ID                             |
+| `PAYSTACK_SECRET_KEY`     |   —\*    | —             | Paystack secret key (`sk_test_...` / `sk_live_...`) |
+| `PAYSTACK_PUBLIC_KEY`     |    —     | —             | Paystack public key (frontend reference only)       |
+| `PAYSTACK_WEBHOOK_SECRET` |    —     | —             | Additional webhook validation secret                |
+| `PAYSTACK_CALLBACK_URL`   |    —     | —             | Default redirect URL after Paystack payment         |
+| `CLOUDINARY_CLOUD_NAME`   |    —     | —             | Cloudinary cloud name                               |
+| `CLOUDINARY_API_KEY`      |    —     | —             | Cloudinary API key                                  |
+| `CLOUDINARY_API_SECRET`   |    —     | —             | Cloudinary API secret                               |
+| `SMTP_HOST`               |    —     | —             | SMTP server host                                    |
+| `SMTP_PORT`               |    —     | —             | SMTP server port                                    |
+| `SMTP_SECURE`             |    —     | —             | Use TLS (`true`/`false`)                            |
+| `SMTP_USER`               |    —     | —             | SMTP username                                       |
+| `SMTP_PASS`               |    —     | —             | SMTP password                                       |
+| `EMAIL_FROM`              |    —     | —             | Sender email address                                |
+| `EMAIL_REPLY_TO`          |    —     | —             | Reply-to email address                              |
+
+> \* `PAYSTACK_SECRET_KEY` is required if you want Paystack payments to work.
 
 ---
 

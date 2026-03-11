@@ -26,6 +26,9 @@ const envSchema = z.object({
   // ── Bcrypt ────────────────────────────────────────────────────
   BCRYPT_SALT_ROUNDS: z.string().default("12"),
 
+  // ── API Key (service-to-service gate) ────────────────────────
+  API_KEY: z.string().min(32, "API_KEY must be at least 32 characters"),
+
   // ── Client ────────────────────────────────────────────────────
   CLIENT_URL: z.url("Invalid CLIENT_URL").optional(),
 
@@ -37,6 +40,14 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
+
+  // ── Paystack ──────────────────────────────────────────────────
+  PAYSTACK_SECRET_KEY: z
+    .string()
+    .min(1, "PAYSTACK_SECRET_KEY is required")
+    .optional(),
+  PAYSTACK_PUBLIC_KEY: z.string().optional(),
+  PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
 
   // ── SMTP (required in production) ─────────────────────────────
   SMTP_HOST: z.string().optional(),

@@ -9,6 +9,19 @@ export const initiatePaymentSchema = z.object({
   }),
 });
 
+export const initiatePaystackSchema = z.object({
+  body: z.object({
+    orderId: z.string().min(1, "Order ID is required"),
+    callbackUrl: z.string().url("Invalid callback URL").optional(),
+  }),
+});
+
+export const verifyPaystackSchema = z.object({
+  params: z.object({
+    reference: z.string().min(1, "Reference is required"),
+  }),
+});
+
 export const confirmPaymentSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({
