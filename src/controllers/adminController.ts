@@ -150,6 +150,71 @@ export const getAuditLogs = catchAsync(async (req: Request, res: Response) => {
 
 // ── Settings (super_admin only) ─────────────────────────────────
 
+export const getAllSettings = catchAsync(
+  async (_req: Request, res: Response) => {
+    const settings = await adminService.getAllSettings();
+    res.status(200).json({
+      status: "success",
+      data: { settings },
+    });
+  },
+);
+
+export const getSettingsByKey = catchAsync(
+  async (
+    req: Request<{ key: "orders" | "reservations" | "payments" }>,
+    res: Response,
+  ) => {
+    const settings = await adminService.getSettingsByKey(req.params.key);
+    res.status(200).json({
+      status: "success",
+      data: { settings },
+    });
+  },
+);
+
+export const updateOrderSettings = catchAsync(
+  async (req: Request, res: Response) => {
+    const settings = await adminService.updateOrderSettings(
+      req.body,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Order settings updated successfully",
+      data: { settings },
+    });
+  },
+);
+
+export const updateReservationSettings = catchAsync(
+  async (req: Request, res: Response) => {
+    const settings = await adminService.updateReservationSettings(
+      req.body,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Reservation settings updated successfully",
+      data: { settings },
+    });
+  },
+);
+
+export const updatePaymentSettings = catchAsync(
+  async (req: Request, res: Response) => {
+    const settings = await adminService.updatePaymentSettings(
+      req.body,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Payment settings updated successfully",
+      data: { settings },
+    });
+  },
+);
+
 export const getProcessingFee = catchAsync(
   async (_req: Request, res: Response) => {
     const processingFee = await adminService.getProcessingFee();

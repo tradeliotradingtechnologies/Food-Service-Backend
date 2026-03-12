@@ -3,13 +3,9 @@ import Cart from "../models/cartModel.js";
 import MenuItem from "../models/menuItemModel.js";
 import Address from "../models/addressModel.js";
 import User from "../models/userModel.js";
-import AppSettings from "../models/appSettingsModel.js";
+import { getOrderSettings, getPaymentSettings } from "./appSettingsService.js";
 import AppError from "../utils/appError.js";
-import type {
-  PaymentMethod,
-  OrderStatus,
-  IProcessingFee,
-} from "../types/model.types.js";
+import type { PaymentMethod, OrderStatus } from "../types/model.types.js";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
@@ -29,6 +25,22 @@ export const createOrder = async (
     notes?: string;
   },
 ) => {
+  const [orderSettings, paymentSettings] = await Promise.all([
+    getOrderSettings(),
+    getPaymentSettings(),
+  ]);
+
+  if (!orderSettings.orderingEnabled) {
+    throw new AppError("Ordering is currently unavailable.", 503);
+  }
+
+  if (!paymentSettings.enabledMethods.includes(data.paymentMethod)) {
+    throw new AppError(
+      `Payment method '${data.paymentMethod}' is currently unavailable.`,
+      400,
+    );
+  }
+
   // Ensure the customer has a saved address
   const user = await User.findById(userId);
   if (!user) throw new AppError("User not found", 404);
@@ -100,19 +112,18 @@ export const createOrder = async (
     subtotal += lineTotal;
   }
 
-  const deliveryFee = 0; // Could be dynamic based on distance
-  const tax = 0; // Could be dynamic based on tax rules
+  const deliveryFee =
+    orderSettings.freeDeliveryThreshold !== null &&
+    subtotal >= orderSettings.freeDeliveryThreshold
+      ? 0
+      : orderSettings.deliveryFee;
 
-  // Fetch current processing fee from settings
-  const processingFeeSetting = await AppSettings.findOne({
-    key: "processing_fee",
-  });
-  let processingFee = 0;
-  if (processingFeeSetting?.value) {
-    const { type, amount } = processingFeeSetting.value as IProcessingFee;
-    processingFee =
-      type === "percentage" ? +((subtotal * amount) / 100).toFixed(2) : amount;
-  }
+  const processingFee =
+    orderSettings.processingFee.type === "percentage"
+      ? +((subtotal * orderSettings.processingFee.amount) / 100).toFixed(2)
+      : orderSettings.processingFee.amount;
+
+  const tax = +((subtotal * orderSettings.taxRate) / 100).toFixed(2);
 
   const totalAmount = subtotal + deliveryFee + processingFee + tax;
 

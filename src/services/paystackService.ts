@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import Payment from "../models/paymentModel.js";
 import Order from "../models/orderModel.js";
+import { getPaymentSettings } from "./appSettingsService.js";
 import AppError from "../utils/appError.js";
 
 // ────────────────────────────────────────────────────────────────
@@ -59,6 +60,16 @@ export const initializeTransaction = async (
   email: string,
   callbackUrl?: string,
 ): Promise<InitializeResult> => {
+  const paymentSettings = await getPaymentSettings();
+
+  if (!paymentSettings.paystackEnabled) {
+    throw new AppError("Paystack payments are currently unavailable", 503);
+  }
+
+  if (!paymentSettings.enabledMethods.includes("card")) {
+    throw new AppError("Card payments are currently unavailable", 400);
+  }
+
   const order = await Order.findOne({ _id: orderId, user: userId });
   if (!order) throw new AppError("Order not found", 404);
 
@@ -81,7 +92,7 @@ export const initializeTransaction = async (
   }>("POST", "/transaction/initialize", {
     email,
     amount: amountInPesewas,
-    currency: "GHS",
+    currency: paymentSettings.currency,
     reference: `EK-${orderId}-${Date.now()}`,
     callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL,
     metadata: {
@@ -110,7 +121,7 @@ export const initializeTransaction = async (
       order: orderId,
       user: userId,
       amount: order.totalAmount,
-      currency: "GHS",
+      currency: paymentSettings.currency,
       method: "card",
       provider: "paystack",
       providerRef: paystackRes.data.reference,
@@ -283,6 +294,7 @@ export const initiateRefund = async (
   amount?: number,
   reason?: string,
 ) => {
+  const paymentSettings = await getPaymentSettings();
   const payment = await Payment.findById(paymentId);
   if (!payment) throw new AppError("Payment not found", 404);
 
@@ -295,6 +307,15 @@ export const initiateRefund = async (
       "Refunds via API are only supported for Paystack payments",
       400,
     );
+  }
+
+  if (
+    paymentSettings.refundWindowDays > 0 &&
+    payment.paidAt &&
+    Date.now() - payment.paidAt.getTime() >
+      paymentSettings.refundWindowDays * 24 * 60 * 60 * 1000
+  ) {
+    throw new AppError("Refund window for this payment has expired", 400);
   }
 
   const refundAmountPesewas = amount

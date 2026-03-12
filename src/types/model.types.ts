@@ -316,9 +316,48 @@ export interface IProcessingFee {
   amount: number;
 }
 
+export interface IOrderSettings {
+  orderingEnabled: boolean;
+  processingFee: IProcessingFee;
+  taxRate: number;
+  deliveryFee: number;
+  freeDeliveryThreshold: number | null;
+}
+
+export interface IReservationSettings {
+  reservationsEnabled: boolean;
+  minPartySize: number;
+  maxPartySize: number;
+  minAdvanceHours: number;
+  maxAdvanceDays: number;
+  openingTime: string;
+  closingTime: string;
+}
+
+export interface IPaymentSettings {
+  currency: string;
+  enabledMethods: PaymentMethod[];
+  paystackEnabled: boolean;
+  allowManualConfirmation: boolean;
+  refundWindowDays: number;
+}
+
+export interface IAppSettingsMap {
+  orders: IOrderSettings;
+  reservations: IReservationSettings;
+  payments: IPaymentSettings;
+}
+
+export type AppSettingKey = keyof IAppSettingsMap;
+
 export interface IAppSettings extends Document {
-  key: string;
-  value: IProcessingFee | unknown;
+  key: AppSettingKey | "processing_fee";
+  value:
+    | IOrderSettings
+    | IReservationSettings
+    | IPaymentSettings
+    | IProcessingFee
+    | unknown;
   description?: string;
   updatedBy?: Types.ObjectId | IUser;
   createdAt: Date;

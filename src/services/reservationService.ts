@@ -1,6 +1,81 @@
 import Reservation from "../models/reservationModel.js";
+import { getReservationSettings } from "./appSettingsService.js";
 import AppError from "../utils/appError.js";
 import type { ReservationStatus } from "../types/model.types.js";
+
+const parseTimeToMinutes = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
+const combineDateAndTime = (date: string | Date, time: string) => {
+  const value = new Date(date);
+  const [hours, minutes] = time.split(":").map(Number);
+  value.setHours(hours, minutes, 0, 0);
+  return value;
+};
+
+const validateReservationRules = async (data: {
+  date: string | Date;
+  time: string;
+  partySize: number;
+}) => {
+  const settings = await getReservationSettings();
+
+  if (!settings.reservationsEnabled) {
+    throw new AppError("Reservations are currently unavailable.", 503);
+  }
+
+  if (data.partySize < settings.minPartySize) {
+    throw new AppError(`Minimum party size is ${settings.minPartySize}.`, 400);
+  }
+
+  if (data.partySize > settings.maxPartySize) {
+    throw new AppError(`Maximum party size is ${settings.maxPartySize}.`, 400);
+  }
+
+  const reservationDateTime = combineDateAndTime(data.date, data.time);
+  const now = new Date();
+
+  if (reservationDateTime.getTime() <= Date.now()) {
+    throw new AppError("Reservation date and time must be in the future.", 400);
+  }
+
+  if (
+    reservationDateTime.getTime() <
+    now.getTime() + settings.minAdvanceHours * 60 * 60 * 1000
+  ) {
+    throw new AppError(
+      `Reservations must be made at least ${settings.minAdvanceHours} hour(s) in advance.`,
+      400,
+    );
+  }
+
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + settings.maxAdvanceDays);
+  maxDate.setHours(23, 59, 59, 999);
+
+  if (reservationDateTime > maxDate) {
+    throw new AppError(
+      `Reservations can only be made ${settings.maxAdvanceDays} day(s) ahead.`,
+      400,
+    );
+  }
+
+  const reservationMinutes = parseTimeToMinutes(data.time);
+  const openingMinutes = parseTimeToMinutes(settings.openingTime);
+  const closingMinutes = parseTimeToMinutes(settings.closingTime);
+
+  if (
+    reservationMinutes < openingMinutes ||
+    reservationMinutes > closingMinutes
+  ) {
+    throw new AppError(
+      `Reservation time must be between ${settings.openingTime} and ${settings.closingTime}.`,
+      400,
+    );
+  }
+};
 
 // ── Create Reservation ──────────────────────────────────────────
 
@@ -16,6 +91,12 @@ export const createReservation = async (
   },
   userId?: string,
 ) => {
+  await validateReservationRules({
+    date: data.date,
+    time: data.time,
+    partySize: data.partySize,
+  });
+
   const reservation = await Reservation.create({
     ...data,
     user: userId || undefined,
@@ -105,6 +186,17 @@ export const updateReservation = async (
     specialRequests?: string;
   },
 ) => {
+  const existingReservation = await Reservation.findById(id);
+  if (!existingReservation) {
+    throw new AppError("Reservation not found", 404);
+  }
+
+  await validateReservationRules({
+    date: data.date ?? existingReservation.date,
+    time: data.time ?? existingReservation.time,
+    partySize: data.partySize ?? existingReservation.partySize,
+  });
+
   const updateData: Record<string, any> = { ...data };
   if (data.date) updateData.date = new Date(data.date);
 

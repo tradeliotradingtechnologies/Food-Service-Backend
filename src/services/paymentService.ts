@@ -1,5 +1,6 @@
 import Payment from "../models/paymentModel.js";
 import Order from "../models/orderModel.js";
+import { getPaymentSettings } from "./appSettingsService.js";
 import AppError from "../utils/appError.js";
 import type { PaymentMethod } from "../types/model.types.js";
 
@@ -9,6 +10,15 @@ export const initiatePayment = async (
   method: PaymentMethod,
   provider?: string,
 ) => {
+  const paymentSettings = await getPaymentSettings();
+
+  if (!paymentSettings.enabledMethods.includes(method)) {
+    throw new AppError(
+      `Payment method '${method}' is currently unavailable.`,
+      400,
+    );
+  }
+
   const order = await Order.findOne({ _id: orderId, user: userId });
   if (!order) throw new AppError("Order not found", 404);
 
@@ -31,7 +41,7 @@ export const initiatePayment = async (
     order: orderId,
     user: userId,
     amount: order.totalAmount,
-    currency: "GHS",
+    currency: paymentSettings.currency,
     method,
     provider,
     status: "initiated",
@@ -43,6 +53,14 @@ export const confirmPayment = async (
   providerRef: string,
   metadata?: Record<string, unknown>,
 ) => {
+  const paymentSettings = await getPaymentSettings();
+  if (!paymentSettings.allowManualConfirmation) {
+    throw new AppError(
+      "Manual payment confirmation is currently disabled",
+      403,
+    );
+  }
+
   const payment = await Payment.findById(paymentId);
   if (!payment) throw new AppError("Payment not found", 404);
 
@@ -75,11 +93,21 @@ export const failPayment = async (paymentId: string) => {
 };
 
 export const refundPayment = async (paymentId: string, amount?: number) => {
+  const paymentSettings = await getPaymentSettings();
   const payment = await Payment.findById(paymentId);
   if (!payment) throw new AppError("Payment not found", 404);
 
   if (payment.status !== "success") {
     throw new AppError("Only successful payments can be refunded", 400);
+  }
+
+  if (
+    paymentSettings.refundWindowDays > 0 &&
+    payment.paidAt &&
+    Date.now() - payment.paidAt.getTime() >
+      paymentSettings.refundWindowDays * 24 * 60 * 60 * 1000
+  ) {
+    throw new AppError("Refund window for this payment has expired", 400);
   }
 
   const refundAmount = amount || payment.amount;

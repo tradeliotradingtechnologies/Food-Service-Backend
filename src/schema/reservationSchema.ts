@@ -8,11 +8,7 @@ export const createReservationSchema = z.object({
     guestPhone: z.string().min(1, "Phone number is required"),
     date: z.string().min(1, "Date is required"), // ISO date string
     time: z.string().regex(/^\d{1,2}:\d{2}$/, "Time must be in HH:MM format"),
-    partySize: z
-      .number()
-      .int()
-      .min(1, "Party size must be at least 1")
-      .max(50, "Party size cannot exceed 50"),
+    partySize: z.number().int().min(1, "Party size must be at least 1"),
     specialRequests: z.string().max(500).optional(),
   }),
 });
@@ -28,7 +24,7 @@ export const updateReservationSchema = z.object({
       .string()
       .regex(/^\d{1,2}:\d{2}$/)
       .optional(),
-    partySize: z.number().int().min(1).max(50).optional(),
+    partySize: z.number().int().min(1).optional(),
     tableNumber: z.number().int().min(1).optional(),
     specialRequests: z.string().max(500).optional(),
   }),

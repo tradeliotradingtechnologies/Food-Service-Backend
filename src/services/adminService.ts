@@ -3,9 +3,20 @@ import Role from "../models/roleModel.js";
 import Permission from "../models/permissionModel.js";
 import OAuthAccount from "../models/oauthAccountModel.js";
 import AuditLog from "../models/auditLogModel.js";
-import AppSettings from "../models/appSettingsModel.js";
+import {
+  getAllSettingSections,
+  getOrderSettings,
+  getSettingSection,
+  updateSettingSection,
+} from "./appSettingsService.js";
 import AppError from "../utils/appError.js";
-import type { IProcessingFee } from "../types/model.types.js";
+import type {
+  AppSettingKey,
+  IOrderSettings,
+  IPaymentSettings,
+  IProcessingFee,
+  IReservationSettings,
+} from "../types/model.types.js";
 
 // ── User Management ─────────────────────────────────────────────
 
@@ -177,40 +188,93 @@ export const updateRolePermissions = async (
   );
 };
 
-// ── Permission Management ───────────────────────────────────────const DEFAULT_PROCESSING_FEE: IProcessingFee = { type: "fixed", amount: 0 };
+// ── App Settings ────────────────────────────────────────────────
+
+const auditSettingsUpdate = async (
+  key: AppSettingKey,
+  before: unknown,
+  after: unknown,
+  adminId: string,
+  action = `settings.update_${key}`,
+) => {
+  await AuditLog.create({
+    actor: adminId,
+    action,
+    resource: "settings",
+    changes: {
+      before: before as Record<string, unknown>,
+      after: after as Record<string, unknown>,
+    },
+    status: "success",
+  });
+};
+
+export const getAllSettings = async () => {
+  return getAllSettingSections();
+};
+
+export const getSettingsByKey = async (key: AppSettingKey) => {
+  return getSettingSection(key);
+};
+
+export const updateOrderSettings = async (
+  data: Partial<IOrderSettings>,
+  adminId: string,
+) => {
+  const before = await getOrderSettings();
+  const settings = await updateSettingSection("orders", data, adminId);
+  await auditSettingsUpdate("orders", before, settings, adminId);
+  return settings;
+};
+
+export const updateReservationSettings = async (
+  data: Partial<IReservationSettings>,
+  adminId: string,
+) => {
+  const before = await getSettingSection("reservations");
+  const settings = await updateSettingSection("reservations", data, adminId);
+  await auditSettingsUpdate("reservations", before, settings, adminId);
+  return settings;
+};
+
+export const updatePaymentSettings = async (
+  data: Partial<IPaymentSettings>,
+  adminId: string,
+) => {
+  const before = await getSettingSection("payments");
+  const settings = await updateSettingSection("payments", data, adminId);
+  await auditSettingsUpdate("payments", before, settings, adminId);
+  return settings;
+};
 
 export const getProcessingFee = async (): Promise<IProcessingFee> => {
-  const setting = await AppSettings.findOne({ key: "processing_fee" });
-  return (setting?.value as IProcessingFee) ?? DEFAULT_PROCESSING_FEE;
+  const settings = await getOrderSettings();
+  return settings.processingFee;
 };
 
 export const updateProcessingFee = async (
   data: IProcessingFee,
   adminId: string,
 ): Promise<IProcessingFee> => {
-  const setting = await AppSettings.findOneAndUpdate(
-    { key: "processing_fee" },
-    {
-      value: data,
-      updatedBy: adminId,
-      description: "Order processing fee charged on each order",
-    },
-    { upsert: true, returnDocument: "after", runValidators: true },
+  const before = await getOrderSettings();
+  const settings = await updateSettingSection(
+    "orders",
+    { processingFee: data },
+    adminId,
   );
 
-  await AuditLog.create({
-    actor: adminId,
-    action: "settings.update_processing_fee",
-    resource: "settings",
-    resourceId: setting?._id,
-    changes: { after: data },
-    status: "success",
-  });
+  await auditSettingsUpdate(
+    "orders",
+    before,
+    settings,
+    adminId,
+    "settings.update_processing_fee",
+  );
 
-  return setting?.value as IProcessingFee;
+  return settings.processingFee;
 };
 
-// ── Permission Management ──────────────────────────────────────────
+// ── Permission Management ───────────────────────────────────────
 export const getAllPermissions = async () => {
   return Permission.find().sort({ resource: 1, action: 1 });
 };

@@ -4,7 +4,11 @@ import { authenticate, authorize, requireRole } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
 import {
   adminUpdateUserSchema,
+  settingsKeySchema,
+  updateOrderSettingsSchema,
+  updatePaymentSettingsSchema,
   userQuerySchema,
+  updateReservationSettingsSchema,
   updateProcessingFeeSchema,
 } from "../schema/adminSchema.js";
 import { paramIdSchema } from "../schema/categorySchema.js";
@@ -68,10 +72,35 @@ router.get("/permissions", authorize("setting:read"), ctrl.getAllPermissions);
 router.get("/audit-logs", authorize("audit_log:read"), ctrl.getAuditLogs);
 
 // ── Settings (super_admin only) ───────────────────────────────
+router.get("/settings", authorize("setting:read"), ctrl.getAllSettings);
 router.get(
   "/settings/processing-fee",
   requireRole("super_admin"),
   ctrl.getProcessingFee,
+);
+router.get(
+  "/settings/:key",
+  authorize("setting:read"),
+  validate(settingsKeySchema),
+  ctrl.getSettingsByKey,
+);
+router.patch(
+  "/settings/orders",
+  requireRole("super_admin"),
+  validate(updateOrderSettingsSchema),
+  ctrl.updateOrderSettings,
+);
+router.patch(
+  "/settings/reservations",
+  requireRole("super_admin"),
+  validate(updateReservationSettingsSchema),
+  ctrl.updateReservationSettings,
+);
+router.patch(
+  "/settings/payments",
+  requireRole("super_admin"),
+  validate(updatePaymentSettingsSchema),
+  ctrl.updatePaymentSettings,
 );
 router.patch(
   "/settings/processing-fee",

@@ -43,7 +43,6 @@ const reservationSchema = new Schema<IReservation>(
       type: Number,
       required: true,
       min: 1,
-      max: 50,
     },
     tableNumber: {
       type: Number,

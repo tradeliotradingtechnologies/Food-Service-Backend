@@ -1,5 +1,16 @@
 import { z } from "zod";
-import { ROLE_NAMES } from "../types/model.types.js";
+import { PAYMENT_METHODS } from "../types/model.types.js";
+
+const timePattern = /^\d{1,2}:\d{2}$/;
+
+const processingFeeSchema = z.object({
+  type: z.enum(["fixed", "percentage"], {
+    message: "type must be 'fixed' or 'percentage'",
+  }),
+  amount: z
+    .number({ message: "amount must be a number" })
+    .min(0, "amount must be >= 0"),
+});
 
 export const adminUpdateUserSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
@@ -27,12 +38,55 @@ export const userQuerySchema = z.object({
 });
 
 export const updateProcessingFeeSchema = z.object({
-  body: z.object({
-    type: z.enum(["fixed", "percentage"], {
-      message: "type must be 'fixed' or 'percentage'",
-    }),
-    amount: z
-      .number({ message: "amount must be a number" })
-      .min(0, "amount must be >= 0"),
+  body: processingFeeSchema,
+});
+
+export const settingsKeySchema = z.object({
+  params: z.object({
+    key: z.enum(["orders", "reservations", "payments"]),
   }),
+});
+
+export const updateOrderSettingsSchema = z.object({
+  body: z
+    .object({
+      orderingEnabled: z.boolean().optional(),
+      processingFee: processingFeeSchema.optional(),
+      taxRate: z.number().min(0).max(100).optional(),
+      deliveryFee: z.number().min(0).optional(),
+      freeDeliveryThreshold: z.number().min(0).nullable().optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one order setting must be provided",
+    }),
+});
+
+export const updateReservationSettingsSchema = z.object({
+  body: z
+    .object({
+      reservationsEnabled: z.boolean().optional(),
+      minPartySize: z.number().int().min(1).optional(),
+      maxPartySize: z.number().int().min(1).optional(),
+      minAdvanceHours: z.number().int().min(0).optional(),
+      maxAdvanceDays: z.number().int().min(1).optional(),
+      openingTime: z.string().regex(timePattern).optional(),
+      closingTime: z.string().regex(timePattern).optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one reservation setting must be provided",
+    }),
+});
+
+export const updatePaymentSettingsSchema = z.object({
+  body: z
+    .object({
+      currency: z.string().min(3).max(3).optional(),
+      enabledMethods: z.array(z.enum(PAYMENT_METHODS)).min(1).optional(),
+      paystackEnabled: z.boolean().optional(),
+      allowManualConfirmation: z.boolean().optional(),
+      refundWindowDays: z.number().int().min(0).optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one payment setting must be provided",
+    }),
 });

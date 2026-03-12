@@ -1091,6 +1091,8 @@ Create a new order from the user's cart.
 
 > `processingFee` is set by the super admin via `PATCH /api/admin/settings/processing-fee`. It can be a flat GHS amount (`"fixed"`) or a percentage of the subtotal (`"percentage"`).
 
+> Other order behavior is also configuration-driven via `PATCH /api/admin/settings/orders`, including `orderingEnabled`, `taxRate`, `deliveryFee`, and `freeDeliveryThreshold`. Payment method availability reflects `PATCH /api/admin/settings/payments` automatically.
+
 ---
 
 #### GET `/orders/my`
@@ -1177,6 +1179,8 @@ Base path: `/api/payments`
 
 Initialize a Paystack payment. Returns a checkout URL to redirect the user to.
 
+> Availability is controlled by `PATCH /api/admin/settings/payments`. If `paystackEnabled` is `false` or card payments are disabled, this endpoint returns an error immediately.
+
 | Field         | Type   | Required | Rules                            |
 | ------------- | ------ | :------: | -------------------------------- |
 | `orderId`     | string |    ✅    | Order ObjectId                   |
@@ -1239,6 +1243,8 @@ Paystack webhook endpoint. **No API key or JWT required** — authenticated via 
 #### POST `/payments` 🔒 Auth
 
 Initiate a generic (non-Paystack) payment for an order.
+
+> Allowed methods come from `PATCH /api/admin/settings/payments` and apply immediately.
 
 | Field      | Type   | Required | Rules                                          |
 | ---------- | ------ | :------: | ---------------------------------------------- |
@@ -1734,6 +1740,50 @@ Get system audit logs.
 
 ---
 
+#### GET `/admin/settings` 🔐 `setting:read`
+
+Get all live application configuration sections.
+
+**Response** `200` — `{ data: { settings: { orders, reservations, payments } } }`
+
+---
+
+#### GET `/admin/settings/:key` 🔐 `setting:read`
+
+Get a single configuration section.
+
+| Param | Allowed Values                       |
+| ----- | ------------------------------------ |
+| `key` | `orders`, `reservations`, `payments` |
+
+**Response** `200`
+
+---
+
+#### PATCH `/admin/settings/orders` 🔐 `super_admin` only
+
+Update order settings. Changes apply immediately to new orders.
+
+Configurable fields include `orderingEnabled`, `processingFee`, `taxRate`, `deliveryFee`, and `freeDeliveryThreshold`.
+
+---
+
+#### PATCH `/admin/settings/reservations` 🔐 `super_admin` only
+
+Update reservation settings. Changes apply immediately to reservation creation and updates.
+
+Configurable fields include `reservationsEnabled`, `minPartySize`, `maxPartySize`, `minAdvanceHours`, `maxAdvanceDays`, `openingTime`, and `closingTime`.
+
+---
+
+#### PATCH `/admin/settings/payments` 🔐 `super_admin` only
+
+Update payment settings. Changes apply immediately to payment initiation and refunds.
+
+Configurable fields include `currency`, `enabledMethods`, `paystackEnabled`, `allowManualConfirmation`, and `refundWindowDays`.
+
+---
+
 #### GET `/admin/settings/processing-fee` 🔐 `super_admin` only
 
 Get the current processing fee configuration.
@@ -1910,6 +1960,8 @@ Base path: `/api/reservations`
 
 Create a new reservation. **No auth required** — guests can make reservations.
 
+> Reservation rules are configuration-driven via `PATCH /api/admin/settings/reservations` and apply immediately.
+
 | Field             | Type    | Required | Rules                                   |
 | ----------------- | ------- | :------: | --------------------------------------- |
 | `guestName`       | string  |    ✅    | Max 100                                 |
@@ -1917,7 +1969,7 @@ Create a new reservation. **No auth required** — guests can make reservations.
 | `guestPhone`      | string  |    ✅    | Valid phone                             |
 | `date`            | string  |    ✅    | ISO date, must be future (`2026-03-10`) |
 | `time`            | string  |    ✅    | `HH:MM` format (`19:30`)                |
-| `partySize`       | integer |    ✅    | 1–50                                    |
+| `partySize`       | integer |    ✅    | Based on configured min/max party size  |
 | `specialRequests` | string  |    —     | Max 500                                 |
 
 **Response** `201`
