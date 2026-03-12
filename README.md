@@ -1218,11 +1218,11 @@ Assign a delivery rider to an order.
 
 Capture live delivery coordinates for an order. Uses browser geolocation API and reverse geocodes to get area name via OpenStreetMap's Nominatim service.
 
-| Field       | Type   | Required | Rules                                   |
-| ----------- | ------ | :------: | --------------------------------------- |
-| `latitude`  | number |    ✅    | Between -90 and 90                      |
-| `longitude` | number |    ✅    | Between -180 and 180                    |
-| `accuracy`  | number |    —     | GPS accuracy in meters (if available)  |
+| Field       | Type   | Required | Rules                                 |
+| ----------- | ------ | :------: | ------------------------------------- |
+| `latitude`  | number |    ✅    | Between -90 and 90                    |
+| `longitude` | number |    ✅    | Between -180 and 180                  |
+| `accuracy`  | number |    —     | GPS accuracy in meters (if available) |
 
 **Response** `200`
 
@@ -1257,10 +1257,10 @@ Capture live delivery coordinates for an order. Uses browser geolocation API and
 
 Update delivery location for pending orders. Allows customers to update their exact delivery spot before dispatch.
 
-| Field       | Type   | Required | Rules                                  |
-| ----------- | ------ | :------: | -------------------------------------- |
-| `latitude`  | number |    ✅    | Between -90 and 90                     |
-| `longitude` | number |    ✅    | Between -180 and 180                   |
+| Field       | Type   | Required | Rules                                 |
+| ----------- | ------ | :------: | ------------------------------------- |
+| `latitude`  | number |    ✅    | Between -90 and 90                    |
+| `longitude` | number |    ✅    | Between -180 and 180                  |
 | `accuracy`  | number |    —     | GPS accuracy in meters (if available) |
 
 **Response** `200`

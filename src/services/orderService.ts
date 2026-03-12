@@ -543,7 +543,11 @@ export const updateDeliveryLocation = async (
   if (!order) throw new AppError("Order not found", 404);
 
   // Only allow updates before dispatch
-  if (!["pending", "confirmed", "preparing", "ready_for_pickup"].includes(order.status)) {
+  if (
+    !["pending", "confirmed", "preparing", "ready_for_pickup"].includes(
+      order.status,
+    )
+  ) {
     throw new AppError(
       "Delivery location can only be updated before dispatch",
       400,
@@ -634,4 +638,3 @@ export const getOrdersForDispatchBoard = async (query: {
     },
   };
 };
-

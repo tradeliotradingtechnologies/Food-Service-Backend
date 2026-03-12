@@ -179,7 +179,11 @@ export const cancelOrder = catchAsync(
 
 export const captureDeliveryCoordinates = catchAsync(
   async (
-    req: Request<{ id: string }, {}, { latitude: number; longitude: number; accuracy?: number }>,
+    req: Request<
+      { id: string },
+      {},
+      { latitude: number; longitude: number; accuracy?: number }
+    >,
     res: Response,
   ) => {
     const order = await orderService.captureDeliveryCoordinates(
@@ -199,7 +203,11 @@ export const captureDeliveryCoordinates = catchAsync(
 
 export const updateDeliveryLocation = catchAsync(
   async (
-    req: Request<{ id: string }, {}, { latitude: number; longitude: number; accuracy?: number }>,
+    req: Request<
+      { id: string },
+      {},
+      { latitude: number; longitude: number; accuracy?: number }
+    >,
     res: Response,
   ) => {
     const order = await orderService.updateDeliveryLocation(
