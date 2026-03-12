@@ -7,6 +7,111 @@ import { getOrderSettings, getPaymentSettings } from "./appSettingsService.js";
 import AppError from "../utils/appError.js";
 import type { PaymentMethod, OrderStatus } from "../types/model.types.js";
 
+const UNPAID_PAYMENT_STATUSES = ["pending", "initiated", "failed"] as const;
+
+const isUnpaidOrder = (paymentStatus: string) =>
+  UNPAID_PAYMENT_STATUSES.includes(
+    paymentStatus as (typeof UNPAID_PAYMENT_STATUSES)[number],
+  );
+
+export const buildDeliveryAddressSnapshot = (
+  user: { name: string },
+  address: {
+    _id: unknown;
+    label?: string;
+    location: string;
+    landmark?: string;
+    gpsAddress?: string;
+    phoneNumber: string;
+  },
+) => ({
+  sourceAddressId: address._id as any,
+  customerName: user.name,
+  addressLabel: address.label,
+  location: address.location,
+  landmark: address.landmark,
+  gpsAddress: address.gpsAddress,
+  phoneNumber: address.phoneNumber,
+});
+
+export const syncPendingOrdersForAddress = async (
+  userId: string,
+  addressId: string,
+  oldAddress: {
+    label?: string;
+    location: string;
+    landmark?: string;
+    gpsAddress?: string;
+    phoneNumber: string;
+  },
+  newAddress: {
+    _id: unknown;
+    label?: string;
+    location: string;
+    landmark?: string;
+    gpsAddress?: string;
+    phoneNumber: string;
+  },
+) => {
+  const user = await User.findById(userId).select("name");
+  if (!user) return { matchedCount: 0, modifiedCount: 0 };
+
+  const snapshot = buildDeliveryAddressSnapshot(user, newAddress);
+
+  return Order.updateMany(
+    {
+      user: userId,
+      status: "pending",
+      paymentStatus: { $in: [...UNPAID_PAYMENT_STATUSES] },
+      $or: [
+        { "deliveryAddress.sourceAddressId": addressId },
+        {
+          "deliveryAddress.location": oldAddress.location,
+          "deliveryAddress.phoneNumber": oldAddress.phoneNumber,
+          "deliveryAddress.addressLabel": oldAddress.label ?? null,
+          "deliveryAddress.landmark": oldAddress.landmark ?? null,
+          "deliveryAddress.gpsAddress": oldAddress.gpsAddress ?? null,
+        },
+      ],
+    },
+    {
+      $set: {
+        deliveryAddress: snapshot,
+      },
+    },
+  );
+};
+
+const resolveUserAddress = async (userId: string, addressId?: string) => {
+  const user = await User.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  let address;
+  if (addressId) {
+    address = await Address.findOne({ _id: addressId, user: userId });
+    if (!address)
+      throw new AppError("The selected address was not found.", 404);
+  } else {
+    address =
+      (user.defaultAddress
+        ? await Address.findOne({ _id: user.defaultAddress, user: userId })
+        : null) ??
+      (await Address.findOne({ user: userId }).sort({
+        isDefault: -1,
+        createdAt: -1,
+      }));
+  }
+
+  if (!address) {
+    throw new AppError(
+      "You must have at least one saved address before placing an order. Please add an address first.",
+      400,
+    );
+  }
+
+  return { user, address };
+};
+
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["preparing", "cancelled"],
@@ -41,43 +146,10 @@ export const createOrder = async (
     );
   }
 
-  // Ensure the customer has a saved address
-  const user = await User.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
-
-  let address;
-  if (data.addressId) {
-    address = await Address.findOne({ _id: data.addressId, user: userId });
-    if (!address)
-      throw new AppError("The selected address was not found.", 404);
-  } else {
-    // Fall back to default address, then any address
-    address =
-      (user.defaultAddress
-        ? await Address.findOne({ _id: user.defaultAddress, user: userId })
-        : null) ??
-      (await Address.findOne({ user: userId }).sort({
-        isDefault: -1,
-        createdAt: -1,
-      }));
-  }
-
-  if (!address) {
-    throw new AppError(
-      "You must have at least one saved address before placing an order. Please add an address first.",
-      400,
-    );
-  }
+  const { user, address } = await resolveUserAddress(userId, data.addressId);
 
   // Auto-build delivery details for the delivery person
-  const deliveryAddress = {
-    customerName: user.name,
-    addressLabel: address.label,
-    location: address.location,
-    landmark: address.landmark,
-    gpsAddress: address.gpsAddress,
-    phoneNumber: address.phoneNumber,
-  };
+  const deliveryAddress = buildDeliveryAddressSnapshot(user, address);
 
   // Get user's cart
   const cart = await Cart.findOne({ user: userId }).populate("items.menuItem");
@@ -181,7 +253,7 @@ export const getAllOrders = async (query: {
   page: number;
   limit: number;
 }) => {
-  const filter: Record<string, any> = {};
+  const filter: Record<string, any> = { paymentStatus: "paid" };
   if (query.status) filter.status = query.status;
 
   const skip = (query.page - 1) * query.limit;
@@ -300,6 +372,44 @@ export const confirmAllOrders = async (changedBy: string, note?: string) => {
   };
 };
 
+export const refreshOrderDeliveryAddress = async (
+  orderId: string,
+  changedBy: string,
+  addressId?: string,
+) => {
+  const order = await Order.findById(orderId);
+  if (!order) throw new AppError("Order not found", 404);
+
+  if (order.status !== "pending") {
+    throw new AppError(
+      "Only pending orders can have their delivery address refreshed.",
+      400,
+    );
+  }
+
+  if (!isUnpaidOrder(String(order.paymentStatus))) {
+    throw new AppError(
+      "Orders cannot have their delivery address refreshed after payment has been made.",
+      400,
+    );
+  }
+
+  const { user, address } = await resolveUserAddress(
+    String(order.user),
+    addressId,
+  );
+  order.deliveryAddress = buildDeliveryAddressSnapshot(user, address) as any;
+  order.statusHistory.push({
+    status: order.status,
+    changedBy: changedBy as any,
+    changedAt: new Date(),
+    note: "Delivery address refreshed from saved address",
+  });
+
+  await order.save();
+  return order;
+};
+
 export const assignRider = async (orderId: string, riderId: string) => {
   const order = await Order.findById(orderId);
   if (!order) throw new AppError("Order not found", 404);
@@ -329,9 +439,7 @@ export const cancelOrder = async (
   const order = await Order.findOne(filter);
   if (!order) throw new AppError("Order not found", 404);
 
-  if (
-    !["pending", "failed", "initiated"].includes(String(order.paymentStatus))
-  ) {
+  if (!isUnpaidOrder(String(order.paymentStatus))) {
     throw new AppError(
       "Orders cannot be cancelled after payment has been made.",
       400,

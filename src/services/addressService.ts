@@ -1,5 +1,6 @@
 import Address from "../models/addressModel.js";
 import User from "../models/userModel.js";
+import { syncPendingOrdersForAddress } from "./orderService.js";
 import AppError from "../utils/appError.js";
 
 export const createAddress = async (
@@ -37,6 +38,9 @@ export const updateAddress = async (
   userId: string,
   data: Record<string, any>,
 ) => {
+  const existingAddress = await Address.findOne({ _id: id, user: userId });
+  if (!existingAddress) throw new AppError("Address not found", 404);
+
   if (data.isDefault) {
     await Address.updateMany({ user: userId }, { isDefault: false });
     await User.findByIdAndUpdate(userId, { defaultAddress: id });
@@ -48,6 +52,20 @@ export const updateAddress = async (
     { returnDocument: "after", runValidators: true },
   );
   if (!address) throw new AppError("Address not found", 404);
+
+  await syncPendingOrdersForAddress(
+    userId,
+    id,
+    {
+      label: existingAddress.label,
+      location: existingAddress.location,
+      landmark: existingAddress.landmark,
+      gpsAddress: existingAddress.gpsAddress,
+      phoneNumber: existingAddress.phoneNumber,
+    },
+    address,
+  );
+
   return address;
 };
 

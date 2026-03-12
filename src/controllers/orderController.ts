@@ -119,6 +119,21 @@ export const confirmAllOrders = catchAsync(
   },
 );
 
+export const refreshOrderDeliveryAddress = catchAsync(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const order = await orderService.refreshOrderDeliveryAddress(
+      req.params.id,
+      req.user._id,
+      req.body.addressId,
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: { order },
+    });
+  },
+);
+
 export const assignRider = catchAsync(
   async (req: Request<{ id: string }>, res: Response) => {
     const order = await orderService.assignRider(

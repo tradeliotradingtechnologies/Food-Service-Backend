@@ -278,6 +278,7 @@ export interface IOrderStatusHistory {
 }
 
 export interface IDeliveryAddress {
+  sourceAddressId?: Types.ObjectId;
   customerName: string;
   addressLabel?: string;
   location: string;

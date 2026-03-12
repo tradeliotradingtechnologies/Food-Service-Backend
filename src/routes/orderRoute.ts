@@ -6,6 +6,7 @@ import {
   createOrderSchema,
   updateOrderStatusSchema,
   confirmAllOrdersSchema,
+  refreshOrderDeliveryAddressSchema,
   assignRiderSchema,
   cancelOrderSchema,
   orderQuerySchema,
@@ -36,6 +37,13 @@ router.patch(
   authorize("order:update"),
   validate(confirmAllOrdersSchema),
   ctrl.confirmAllOrders,
+);
+
+router.patch(
+  "/:id/refresh-address",
+  authorize("order:update"),
+  validate(refreshOrderDeliveryAddressSchema),
+  ctrl.refreshOrderDeliveryAddress,
 );
 
 router.patch(

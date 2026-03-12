@@ -25,6 +25,13 @@ export const confirmAllOrdersSchema = z.object({
   }),
 });
 
+export const refreshOrderDeliveryAddressSchema = z.object({
+  params: z.object({ id: z.string().min(1) }),
+  body: z.object({
+    addressId: z.string().optional(),
+  }),
+});
+
 export const assignRiderSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({

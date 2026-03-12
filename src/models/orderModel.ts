@@ -29,6 +29,7 @@ const statusHistorySchema = new Schema(
 
 const deliveryAddressSchema = new Schema(
   {
+    sourceAddressId: { type: Schema.Types.ObjectId, ref: "Address" },
     customerName: { type: String, required: true },
     addressLabel: { type: String },
     location: { type: String, required: true },

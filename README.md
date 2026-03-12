@@ -1045,6 +1045,8 @@ Create a new order from the user's cart.
 
 **Delivery details are auto-generated** from the saved address — you no longer supply `location`, `phoneNumber`, etc. in the request body.
 
+> If the customer later updates that saved address, the new details automatically sync to the customer's own `pending` unpaid orders. Confirmed, paid, delivered, or cancelled orders keep their existing snapshot.
+
 **Response** `201`
 
 ```json
@@ -1135,9 +1137,11 @@ Cancel a pending order.
 
 #### GET `/orders` 🔐 `order:read`
 
-Get all orders in the system (admin/staff view).
+Get all paid orders in the system (admin/staff view).
 
 **Response** `200` — Paginated.
+
+> Unpaid orders do not appear in the admin order listing.
 
 ---
 
@@ -1161,6 +1165,20 @@ Confirm all currently pending orders in one request.
   }
 }
 ```
+
+---
+
+#### PATCH `/orders/:id/refresh-address` 🔐 `order:update`
+
+Refresh a pending unpaid order's delivery snapshot from the customer's saved address.
+
+| Field       | Type   | Required | Rules                                                  |
+| ----------- | ------ | :------: | ------------------------------------------------------ |
+| `addressId` | string |    —     | Specific saved address to use. Omit for default/recent |
+
+**Response** `200`
+
+> This endpoint is intended for staff/admin use before confirmation. It only works for `pending` unpaid orders.
 
 ---
 
@@ -2434,6 +2452,7 @@ pending → confirmed → seated → completed
 |  POST  | `/orders/:id/cancel`             |  🔒  | —                      |
 |  GET   | `/orders`                        |  🔒  | `order:read`           |
 | PATCH  | `/orders/confirm-all`            |  🔒  | `order:update`         |
+| PATCH  | `/orders/:id/refresh-address`    |  🔒  | `order:update`         |
 | PATCH  | `/orders/:id/status`             |  🔒  | `order:update`         |
 | PATCH  | `/orders/:id/assign-rider`       |  🔒  | `order:update`         |
 |        |                                  |      |                        |
