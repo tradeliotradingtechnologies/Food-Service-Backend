@@ -5,6 +5,7 @@ import validate from "../middleware/validate.js";
 import {
   createOrderSchema,
   updateOrderStatusSchema,
+  confirmAllOrdersSchema,
   assignRiderSchema,
   cancelOrderSchema,
   orderQuerySchema,
@@ -28,6 +29,13 @@ router.get(
   authorize("order:read"),
   validate(orderQuerySchema),
   ctrl.getAllOrders,
+);
+
+router.patch(
+  "/confirm-all",
+  authorize("order:update"),
+  validate(confirmAllOrdersSchema),
+  ctrl.confirmAllOrders,
 );
 
 router.patch(

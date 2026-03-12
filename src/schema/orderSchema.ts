@@ -19,6 +19,12 @@ export const updateOrderStatusSchema = z.object({
   }),
 });
 
+export const confirmAllOrdersSchema = z.object({
+  body: z.object({
+    note: z.string().max(300).optional(),
+  }),
+});
+
 export const assignRiderSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({

@@ -228,6 +228,16 @@ export const updateOrderStatus = async (
   const order = await Order.findById(id);
   if (!order) throw new AppError("Order not found", 404);
 
+  if (
+    status === "cancelled" &&
+    !["pending", "failed", "initiated"].includes(String(order.paymentStatus))
+  ) {
+    throw new AppError(
+      "Paid orders cannot be cancelled. Refund the payment first if needed.",
+      400,
+    );
+  }
+
   const allowed = VALID_TRANSITIONS[order.status];
   if (!allowed || !allowed.includes(status)) {
     throw new AppError(
@@ -250,6 +260,44 @@ export const updateOrderStatus = async (
 
   await order.save();
   return order;
+};
+
+export const confirmAllOrders = async (changedBy: string, note?: string) => {
+  const pendingOrders = await Order.find({ status: "pending" }).select("_id");
+
+  if (pendingOrders.length === 0) {
+    return {
+      confirmedCount: 0,
+      orders: [],
+    };
+  }
+
+  const orderIds = pendingOrders.map((order) => order._id);
+  const changedAt = new Date();
+
+  await Order.updateMany(
+    { _id: { $in: orderIds } },
+    {
+      $set: { status: "confirmed" },
+      $push: {
+        statusHistory: {
+          status: "confirmed",
+          changedBy: changedBy as any,
+          changedAt,
+          note,
+        },
+      },
+    },
+  );
+
+  const orders = await Order.find({ _id: { $in: orderIds } })
+    .populate("user", "name email")
+    .sort({ createdAt: -1 });
+
+  return {
+    confirmedCount: orders.length,
+    orders,
+  };
 };
 
 export const assignRider = async (orderId: string, riderId: string) => {
@@ -281,10 +329,19 @@ export const cancelOrder = async (
   const order = await Order.findOne(filter);
   if (!order) throw new AppError("Order not found", 404);
 
-  const cancellable = ["pending", "confirmed"];
+  if (
+    !["pending", "failed", "initiated"].includes(String(order.paymentStatus))
+  ) {
+    throw new AppError(
+      "Orders cannot be cancelled after payment has been made.",
+      400,
+    );
+  }
+
+  const cancellable = ["pending"];
   if (!isAdmin && !cancellable.includes(order.status)) {
     throw new AppError(
-      "Order can only be cancelled when pending or confirmed",
+      "Customers can only cancel orders when they are still pending",
       400,
     );
   }

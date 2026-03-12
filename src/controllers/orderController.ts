@@ -104,6 +104,21 @@ export const updateOrderStatus = catchAsync(
   },
 );
 
+export const confirmAllOrders = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await orderService.confirmAllOrders(
+      req.user._id,
+      req.body.note,
+    );
+
+    res.status(200).json({
+      status: "success",
+      results: result.confirmedCount,
+      data: result,
+    });
+  },
+);
+
 export const assignRider = catchAsync(
   async (req: Request<{ id: string }>, res: Response) => {
     const order = await orderService.assignRider(

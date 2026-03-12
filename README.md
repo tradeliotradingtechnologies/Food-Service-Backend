@@ -1127,7 +1127,9 @@ Cancel a pending order.
 
 **Response** `200`
 
-> Only orders with `status: "pending"` can be cancelled.
+> Customers can only cancel orders with `status: "pending"`.
+
+> Orders cannot be cancelled after payment has been made.
 
 ---
 
@@ -1136,6 +1138,29 @@ Cancel a pending order.
 Get all orders in the system (admin/staff view).
 
 **Response** `200` — Paginated.
+
+---
+
+#### PATCH `/orders/confirm-all` 🔐 `order:update`
+
+Confirm all currently pending orders in one request.
+
+| Field  | Type   | Required | Rules   |
+| ------ | ------ | :------: | ------- |
+| `note` | string |    —     | Max 300 |
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "results": 12,
+  "data": {
+    "confirmedCount": 12,
+    "orders": [{ "_id": "...", "status": "confirmed" }]
+  }
+}
+```
 
 ---
 
@@ -1152,7 +1177,7 @@ Update an order's status.
 
 ```
 pending → confirmed → preparing → ready_for_pickup → out_for_delivery → delivered
-     ↘ cancelled (from any status)
+  ↘ cancelled (before payment only)
 ```
 
 **Response** `200`
@@ -2408,6 +2433,7 @@ pending → confirmed → seated → completed
 |  GET   | `/orders/:id`                    |  🔒  | —                      |
 |  POST  | `/orders/:id/cancel`             |  🔒  | —                      |
 |  GET   | `/orders`                        |  🔒  | `order:read`           |
+| PATCH  | `/orders/confirm-all`            |  🔒  | `order:update`         |
 | PATCH  | `/orders/:id/status`             |  🔒  | `order:update`         |
 | PATCH  | `/orders/:id/assign-rider`       |  🔒  | `order:update`         |
 |        |                                  |      |                        |
