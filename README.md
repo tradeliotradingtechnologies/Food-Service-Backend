@@ -2408,6 +2408,7 @@ pending → confirmed → seated → completed
     lineTotal: number;
   }[];
   deliveryAddress: {
+    sourceAddressId?: string;    // link to saved address used for snapshot sync
     customerName: string;        // auto-populated from user profile
     addressLabel?: string;       // e.g. "Home", "Office"
     location: string;
@@ -2434,6 +2435,14 @@ pending → confirmed → seated → completed
   deliveredAt?: string;
   notes?: string;
   cancellationReason?: string;
+  deliveryCoordinates?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;           // GPS accuracy radius in meters
+    capturedAt: string;
+  };
+  areaName?: string;             // reverse-geocoded area from OpenStreetMap/Nominatim
+  liveLocationUpdatedAt?: string;
   createdAt: string;
 }
 ```
