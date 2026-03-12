@@ -3,7 +3,9 @@ import Role from "../models/roleModel.js";
 import Permission from "../models/permissionModel.js";
 import OAuthAccount from "../models/oauthAccountModel.js";
 import AuditLog from "../models/auditLogModel.js";
+import AppSettings from "../models/appSettingsModel.js";
 import AppError from "../utils/appError.js";
+import type { IProcessingFee } from "../types/model.types.js";
 
 // ── User Management ─────────────────────────────────────────────
 
@@ -175,8 +177,40 @@ export const updateRolePermissions = async (
   );
 };
 
-// ── Permission Management ───────────────────────────────────────
+// ── Permission Management ───────────────────────────────────────const DEFAULT_PROCESSING_FEE: IProcessingFee = { type: "fixed", amount: 0 };
 
+export const getProcessingFee = async (): Promise<IProcessingFee> => {
+  const setting = await AppSettings.findOne({ key: "processing_fee" });
+  return (setting?.value as IProcessingFee) ?? DEFAULT_PROCESSING_FEE;
+};
+
+export const updateProcessingFee = async (
+  data: IProcessingFee,
+  adminId: string,
+): Promise<IProcessingFee> => {
+  const setting = await AppSettings.findOneAndUpdate(
+    { key: "processing_fee" },
+    {
+      value: data,
+      updatedBy: adminId,
+      description: "Order processing fee charged on each order",
+    },
+    { upsert: true, returnDocument: "after", runValidators: true },
+  );
+
+  await AuditLog.create({
+    actor: adminId,
+    action: "settings.update_processing_fee",
+    resource: "settings",
+    resourceId: setting?._id,
+    changes: { after: data },
+    status: "success",
+  });
+
+  return setting?.value as IProcessingFee;
+};
+
+// ── Permission Management ──────────────────────────────────────────
 export const getAllPermissions = async () => {
   return Permission.find().sort({ resource: 1, action: 1 });
 };

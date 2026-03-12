@@ -1,8 +1,15 @@
 import Order from "../models/orderModel.js";
 import Cart from "../models/cartModel.js";
 import MenuItem from "../models/menuItemModel.js";
+import Address from "../models/addressModel.js";
+import User from "../models/userModel.js";
+import AppSettings from "../models/appSettingsModel.js";
 import AppError from "../utils/appError.js";
-import type { PaymentMethod, OrderStatus } from "../types/model.types.js";
+import type {
+  PaymentMethod,
+  OrderStatus,
+  IProcessingFee,
+} from "../types/model.types.js";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
@@ -17,16 +24,49 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 export const createOrder = async (
   userId: string,
   data: {
-    deliveryAddress: {
-      location: string;
-      landmark?: string;
-      gpsAddress?: string;
-      phoneNumber: string;
-    };
+    addressId?: string;
     paymentMethod: PaymentMethod;
     notes?: string;
   },
 ) => {
+  // Ensure the customer has a saved address
+  const user = await User.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  let address;
+  if (data.addressId) {
+    address = await Address.findOne({ _id: data.addressId, user: userId });
+    if (!address)
+      throw new AppError("The selected address was not found.", 404);
+  } else {
+    // Fall back to default address, then any address
+    address =
+      (user.defaultAddress
+        ? await Address.findOne({ _id: user.defaultAddress, user: userId })
+        : null) ??
+      (await Address.findOne({ user: userId }).sort({
+        isDefault: -1,
+        createdAt: -1,
+      }));
+  }
+
+  if (!address) {
+    throw new AppError(
+      "You must have at least one saved address before placing an order. Please add an address first.",
+      400,
+    );
+  }
+
+  // Auto-build delivery details for the delivery person
+  const deliveryAddress = {
+    customerName: user.name,
+    addressLabel: address.label,
+    location: address.location,
+    landmark: address.landmark,
+    gpsAddress: address.gpsAddress,
+    phoneNumber: address.phoneNumber,
+  };
+
   // Get user's cart
   const cart = await Cart.findOne({ user: userId }).populate("items.menuItem");
   if (!cart || cart.items.length === 0) {
@@ -62,14 +102,27 @@ export const createOrder = async (
 
   const deliveryFee = 0; // Could be dynamic based on distance
   const tax = 0; // Could be dynamic based on tax rules
-  const totalAmount = subtotal + deliveryFee + tax;
+
+  // Fetch current processing fee from settings
+  const processingFeeSetting = await AppSettings.findOne({
+    key: "processing_fee",
+  });
+  let processingFee = 0;
+  if (processingFeeSetting?.value) {
+    const { type, amount } = processingFeeSetting.value as IProcessingFee;
+    processingFee =
+      type === "percentage" ? +((subtotal * amount) / 100).toFixed(2) : amount;
+  }
+
+  const totalAmount = subtotal + deliveryFee + processingFee + tax;
 
   const order = await Order.create({
     user: userId,
     items: orderItems,
-    deliveryAddress: data.deliveryAddress,
+    deliveryAddress,
     deliveryFee,
     subtotal,
+    processingFee,
     tax,
     totalAmount,
     paymentMethod: data.paymentMethod,

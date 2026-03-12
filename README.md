@@ -1035,15 +1035,15 @@ Base path: `/api/orders` — 🔒 All routes require auth
 
 Create a new order from the user's cart.
 
-| Field                         | Type   | Required | Rules                                          |
-| ----------------------------- | ------ | :------: | ---------------------------------------------- |
-| `deliveryAddress`             | object |    ✅    | See below                                      |
-| `deliveryAddress.location`    | string |    ✅    |                                                |
-| `deliveryAddress.landmark`    | string |    —     |                                                |
-| `deliveryAddress.gpsAddress`  | string |    —     |                                                |
-| `deliveryAddress.phoneNumber` | string |    ✅    | Valid phone                                    |
-| `paymentMethod`               | string |    ✅    | `mobile_money` \| `card` \| `cash_on_delivery` |
-| `notes`                       | string |    —     | Max 500                                        |
+> **Pre-requisite**: The customer must have at least one saved address. If no address exists, the API returns `400`. Add an address via `POST /api/addresses` first.
+
+| Field           | Type   | Required | Rules                                          |
+| --------------- | ------ | :------: | ---------------------------------------------- |
+| `addressId`     | string |    —     | ID of a saved address. Omit to use the default |
+| `paymentMethod` | string |    ✅    | `mobile_money` \| `card` \| `cash_on_delivery` |
+| `notes`         | string |    —     | Max 500                                        |
+
+**Delivery details are auto-generated** from the saved address — you no longer supply `location`, `phoneNumber`, etc. in the request body.
 
 **Response** `201`
 
@@ -1065,14 +1065,18 @@ Create a new order from the user's cart.
         }
       ],
       "deliveryAddress": {
+        "customerName": "Abena Customer",
+        "addressLabel": "Home",
         "location": "East Legon, Accra",
         "landmark": "Near A&C Mall",
+        "gpsAddress": "GA-123-4567",
         "phoneNumber": "+233201234567"
       },
-      "deliveryFee": 10.0,
+      "deliveryFee": 0,
       "subtotal": 90.0,
+      "processingFee": 2.5,
       "tax": 0,
-      "totalAmount": 100.0,
+      "totalAmount": 92.5,
       "status": "pending",
       "statusHistory": [{ "status": "pending", "changedAt": "2026-03-03T..." }],
       "paymentMethod": "mobile_money",
@@ -1084,6 +1088,8 @@ Create a new order from the user's cart.
 ```
 
 > The cart is cleared after a successful order.
+
+> `processingFee` is set by the super admin via `PATCH /api/admin/settings/processing-fee`. It can be a flat GHS amount (`"fixed"`) or a percentage of the subtotal (`"percentage"`).
 
 ---
 
@@ -1728,6 +1734,59 @@ Get system audit logs.
 
 ---
 
+#### GET `/admin/settings/processing-fee` 🔐 `super_admin` only
+
+Get the current processing fee configuration.
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "data": {
+    "processingFee": {
+      "type": "fixed",
+      "amount": 2.5
+    }
+  }
+}
+```
+
+---
+
+#### PATCH `/admin/settings/processing-fee` 🔐 `super_admin` only
+
+Update the processing fee applied to every new order. Only the `super_admin` role can access this endpoint.
+
+| Field    | Type   | Required | Rules                               |
+| -------- | ------ | :------: | ----------------------------------- |
+| `type`   | string |    ✅    | `fixed` \| `percentage`             |
+| `amount` | number |    ✅    | `>= 0`. Fixed = GHS. Percentage = % |
+
+Examples:
+
+```json
+// Flat GHS 2.50 fee
+{ "type": "fixed", "amount": 2.50 }
+
+// 1.5% of subtotal
+{ "type": "percentage", "amount": 1.5 }
+```
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "message": "Processing fee updated successfully",
+  "data": {
+    "processingFee": { "type": "fixed", "amount": 2.5 }
+  }
+}
+```
+
+---
+
 ### 13. Analytics
 
 Base path: `/api/analytics` — 🔐 All routes require `report:read` permission
@@ -2111,15 +2170,18 @@ pending → confirmed → seated → completed
     lineTotal: number;
   }[];
   deliveryAddress: {
+    customerName: string;        // auto-populated from user profile
+    addressLabel?: string;       // e.g. "Home", "Office"
     location: string;
     landmark?: string;
-    gpsAddress?: string;
+    gpsAddress?: string;         // Ghana Post GPS: GA-XXX-XXXX
     phoneNumber: string;
   };
   deliveryFee: number;
   subtotal: number;
+  processingFee: number;         // set by super admin via PATCH /admin/settings/processing-fee
   tax: number;
-  totalAmount: number;
+  totalAmount: number;           // subtotal + deliveryFee + processingFee + tax
   status: OrderStatus;
   statusHistory: {
     status: string;
@@ -2337,6 +2399,8 @@ pending → confirmed → seated → completed
 | PATCH  | `/admin/roles/:id/permissions`   |  🔒  | `setting:update`       |
 |  GET   | `/admin/permissions`             |  🔒  | `setting:read`         |
 |  GET   | `/admin/audit-logs`              |  🔒  | `audit_log:read`       |
+|  GET   | `/admin/settings/processing-fee` |  🔒  | `super_admin` only     |
+| PATCH  | `/admin/settings/processing-fee` |  🔒  | `super_admin` only     |
 |        |                                  |      |                        |
 |  GET   | `/analytics/dashboard`           |  🔒  | `report:read`          |
 |  GET   | `/analytics/revenue-chart`       |  🔒  | `report:read`          |

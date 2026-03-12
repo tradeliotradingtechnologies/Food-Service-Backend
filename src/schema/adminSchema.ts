@@ -25,3 +25,14 @@ export const userQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),
   }),
 });
+
+export const updateProcessingFeeSchema = z.object({
+  body: z.object({
+    type: z.enum(["fixed", "percentage"], {
+      message: "type must be 'fixed' or 'percentage'",
+    }),
+    amount: z
+      .number({ message: "amount must be a number" })
+      .min(0, "amount must be >= 0"),
+  }),
+});

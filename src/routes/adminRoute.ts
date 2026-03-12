@@ -1,10 +1,11 @@
 import { Router } from "express";
 import * as ctrl from "../controllers/adminController.js";
-import { authenticate, authorize } from "../middleware/auth.js";
+import { authenticate, authorize, requireRole } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
 import {
   adminUpdateUserSchema,
   userQuerySchema,
+  updateProcessingFeeSchema,
 } from "../schema/adminSchema.js";
 import { paramIdSchema } from "../schema/categorySchema.js";
 
@@ -63,7 +64,20 @@ router.patch(
 
 router.get("/permissions", authorize("setting:read"), ctrl.getAllPermissions);
 
-// ── Audit Logs ──────────────────────────────────────────────────
+// ── Audit Logs ───────────────────────────────────────────
 router.get("/audit-logs", authorize("audit_log:read"), ctrl.getAuditLogs);
+
+// ── Settings (super_admin only) ───────────────────────────────
+router.get(
+  "/settings/processing-fee",
+  requireRole("super_admin"),
+  ctrl.getProcessingFee,
+);
+router.patch(
+  "/settings/processing-fee",
+  requireRole("super_admin"),
+  validate(updateProcessingFeeSchema),
+  ctrl.updateProcessingFee,
+);
 
 export default router;

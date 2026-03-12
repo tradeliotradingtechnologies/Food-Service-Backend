@@ -16,3 +16,4 @@ export { default as OAuthAccount } from "./oauthAccountModel.js";
 export { default as RefreshToken } from "./refreshTokenModel.js";
 export { default as AuditLog } from "./auditLogModel.js";
 export { default as Reservation } from "./reservationModel.js";
+export { default as AppSettings } from "./appSettingsModel.js";

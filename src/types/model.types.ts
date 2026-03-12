@@ -278,6 +278,8 @@ export interface IOrderStatusHistory {
 }
 
 export interface IDeliveryAddress {
+  customerName: string;
+  addressLabel?: string;
   location: string;
   landmark?: string;
   gpsAddress?: string;
@@ -291,6 +293,7 @@ export interface IOrder extends Document {
   deliveryAddress: IDeliveryAddress;
   deliveryFee: number;
   subtotal: number;
+  processingFee: number;
   tax: number;
   totalAmount: number;
   status: OrderStatus;
@@ -302,6 +305,22 @@ export interface IOrder extends Document {
   deliveredAt?: Date;
   notes?: string;
   cancellationReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── App Settings ────────────────────────────────
+
+export interface IProcessingFee {
+  type: "fixed" | "percentage";
+  amount: number;
+}
+
+export interface IAppSettings extends Document {
+  key: string;
+  value: IProcessingFee | unknown;
+  description?: string;
+  updatedBy?: Types.ObjectId | IUser;
   createdAt: Date;
   updatedAt: Date;
 }

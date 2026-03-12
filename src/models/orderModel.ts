@@ -29,6 +29,8 @@ const statusHistorySchema = new Schema(
 
 const deliveryAddressSchema = new Schema(
   {
+    customerName: { type: String, required: true },
+    addressLabel: { type: String },
     location: { type: String, required: true },
     landmark: { type: String },
     gpsAddress: { type: String },
@@ -55,6 +57,7 @@ const orderSchema = new Schema<IOrder>(
     deliveryAddress: { type: deliveryAddressSchema, required: true },
     deliveryFee: { type: Number, default: 0, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },
+    processingFee: { type: Number, default: 0, min: 0 },
     tax: { type: Number, default: 0, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     status: {

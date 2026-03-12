@@ -77,6 +77,22 @@ export const authenticate = catchAsync(
 );
 
 /**
+ * RequireRole: restrict access to users with one of the specified role names.
+ * Usage: requireRole("super_admin")
+ */
+export const requireRole = (...roles: string[]) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const roleName = (req.user?.role as any)?.name;
+    if (!roleName || !roles.includes(roleName)) {
+      return next(
+        new AppError("You do not have permission to perform this action", 403),
+      );
+    }
+    next();
+  };
+};
+
+/**
  * Authorize: check if user's role has the required permissions.
  * Usage: authorize("menu:create", "menu:update")
  */

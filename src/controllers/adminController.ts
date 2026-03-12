@@ -129,7 +129,7 @@ export const getAllPermissions = catchAsync(
   },
 );
 
-// ── Audit Logs ──────────────────────────────────────────────────
+// ── Audit Logs ──────────────────────────────────────────────
 
 export const getAuditLogs = catchAsync(async (req: Request, res: Response) => {
   const result = await adminService.getAuditLogs(
@@ -147,3 +147,29 @@ export const getAuditLogs = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+// ── Settings (super_admin only) ─────────────────────────────────
+
+export const getProcessingFee = catchAsync(
+  async (_req: Request, res: Response) => {
+    const processingFee = await adminService.getProcessingFee();
+    res.status(200).json({
+      status: "success",
+      data: { processingFee },
+    });
+  },
+);
+
+export const updateProcessingFee = catchAsync(
+  async (req: Request, res: Response) => {
+    const processingFee = await adminService.updateProcessingFee(
+      req.body,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Processing fee updated successfully",
+      data: { processingFee },
+    });
+  },
+);

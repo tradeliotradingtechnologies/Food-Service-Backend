@@ -3,14 +3,7 @@ import { ORDER_STATUSES, PAYMENT_METHODS } from "../types/model.types.js";
 
 export const createOrderSchema = z.object({
   body: z.object({
-    deliveryAddress: z.object({
-      location: z.string().min(1, "Location is required"),
-      landmark: z.string().optional(),
-      gpsAddress: z.string().optional(),
-      phoneNumber: z
-        .string()
-        .regex(/^\+?[0-9]{7,15}$/, "Valid phone number is required"),
-    }),
+    addressId: z.string().optional(),
     paymentMethod: z.enum(PAYMENT_METHODS, {
       message: "Invalid payment method",
     }),
