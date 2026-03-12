@@ -10,6 +10,9 @@ import {
   assignRiderSchema,
   cancelOrderSchema,
   orderQuerySchema,
+  captureDeliveryCoordinatesSchema,
+  updateDeliveryLocationSchema,
+  dispatchBoardQuerySchema,
 } from "../schema/orderSchema.js";
 import { paramIdSchema } from "../schema/categorySchema.js";
 
@@ -58,6 +61,34 @@ router.patch(
   authorize("order:update"),
   validate(assignRiderSchema),
   ctrl.assignRider,
+);
+
+// ── Geolocation / Delivery routes ───────────────────────────────
+router.patch(
+  "/:id/capture-coordinates",
+  authorize("order:update"),
+  validate(captureDeliveryCoordinatesSchema),
+  ctrl.captureDeliveryCoordinates,
+);
+
+router.patch(
+  "/:id/update-location",
+  validate(updateDeliveryLocationSchema),
+  ctrl.updateDeliveryLocation,
+);
+
+router.get(
+  "/delivery/:id",
+  authorize("delivery:read"),
+  validate(paramIdSchema),
+  ctrl.getOrderForDelivery,
+);
+
+router.get(
+  "/dispatch-board/",
+  authorize("order:read"),
+  validate(dispatchBoardQuerySchema),
+  ctrl.getOrdersForDispatchBoard,
 );
 
 export default router;

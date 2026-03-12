@@ -176,3 +176,74 @@ export const cancelOrder = catchAsync(
     });
   },
 );
+
+export const captureDeliveryCoordinates = catchAsync(
+  async (
+    req: Request<{ id: string }, {}, { latitude: number; longitude: number; accuracy?: number }>,
+    res: Response,
+  ) => {
+    const order = await orderService.captureDeliveryCoordinates(
+      req.params.id,
+      req.body.latitude,
+      req.body.longitude,
+      req.body.accuracy,
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Delivery coordinates captured",
+      data: { order },
+    });
+  },
+);
+
+export const updateDeliveryLocation = catchAsync(
+  async (
+    req: Request<{ id: string }, {}, { latitude: number; longitude: number; accuracy?: number }>,
+    res: Response,
+  ) => {
+    const order = await orderService.updateDeliveryLocation(
+      req.params.id,
+      req.user._id,
+      req.body.latitude,
+      req.body.longitude,
+      req.body.accuracy,
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Delivery location updated",
+      data: { order },
+    });
+  },
+);
+
+export const getOrderForDelivery = catchAsync(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const order = await orderService.getOrderForDelivery(
+      req.params.id,
+      req.user._id,
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: { order },
+    });
+  },
+);
+
+export const getOrdersForDispatchBoard = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await orderService.getOrdersForDispatchBoard({
+      status: req.query.status as string | undefined,
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 20,
+    });
+
+    res.status(200).json({
+      status: "success",
+      results: result.orders.length,
+      data: result,
+    });
+  },
+);

@@ -4,6 +4,11 @@ import MenuItem from "../models/menuItemModel.js";
 import Address from "../models/addressModel.js";
 import User from "../models/userModel.js";
 import { getOrderSettings, getPaymentSettings } from "./appSettingsService.js";
+import {
+  reverseGeocodeCoordinates,
+  validateCoordinates,
+  buildDeliveryCoordinates,
+} from "./geolocationService.js";
 import AppError from "../utils/appError.js";
 import type { PaymentMethod, OrderStatus } from "../types/model.types.js";
 
@@ -470,3 +475,163 @@ export const cancelOrder = async (
   await order.save();
   return order;
 };
+
+/**
+ * Captures delivery coordinates at order creation or during delivery
+ * Performs reverse geocoding to get area name
+ * Only available for pending/early-stage orders
+ */
+export const captureDeliveryCoordinates = async (
+  orderId: string,
+  latitude: number,
+  longitude: number,
+  accuracy?: number,
+) => {
+  const order = await Order.findById(orderId);
+  if (!order) throw new AppError("Order not found", 404);
+
+  // Check if order is in a stage where location capture makes sense
+  const allowedStatuses = [
+    "pending",
+    "confirmed",
+    "preparing",
+    "ready_for_pickup",
+  ];
+  if (!allowedStatuses.includes(order.status)) {
+    throw new AppError(
+      "Location can only be captured for pending, confirmed, preparing, or ready for pickup orders",
+      400,
+    );
+  }
+
+  // Validate coordinates
+  const validation = validateCoordinates(latitude, longitude);
+  if (!validation.valid) {
+    throw new AppError(validation.error || "Invalid coordinates", 400);
+  }
+
+  const deliveryCoordinates = buildDeliveryCoordinates(
+    latitude,
+    longitude,
+    accuracy,
+  );
+  const areaName = await reverseGeocodeCoordinates(latitude, longitude);
+
+  order.deliveryCoordinates = deliveryCoordinates as any;
+  order.areaName = areaName || undefined;
+  order.liveLocationUpdatedAt = new Date();
+
+  await order.save();
+  return order;
+};
+
+/**
+ * Updates delivery location for pending orders (before dispatch)
+ * Useful when customer moves or wants to update exact delivery spot
+ */
+export const updateDeliveryLocation = async (
+  orderId: string,
+  userId: string,
+  latitude: number,
+  longitude: number,
+  accuracy?: number,
+) => {
+  const order = await Order.findOne({
+    _id: orderId,
+    user: userId,
+  });
+  if (!order) throw new AppError("Order not found", 404);
+
+  // Only allow updates before dispatch
+  if (!["pending", "confirmed", "preparing", "ready_for_pickup"].includes(order.status)) {
+    throw new AppError(
+      "Delivery location can only be updated before dispatch",
+      400,
+    );
+  }
+
+  if (!isUnpaidOrder(String(order.paymentStatus))) {
+    throw new AppError(
+      "Delivery location cannot be updated for paid orders",
+      400,
+    );
+  }
+
+  const validation = validateCoordinates(latitude, longitude);
+  if (!validation.valid) {
+    throw new AppError(validation.error || "Invalid coordinates", 400);
+  }
+
+  const deliveryCoordinates = buildDeliveryCoordinates(
+    latitude,
+    longitude,
+    accuracy,
+  );
+  const areaName = await reverseGeocodeCoordinates(latitude, longitude);
+
+  order.deliveryCoordinates = deliveryCoordinates as any;
+  order.areaName = areaName || undefined;
+  order.liveLocationUpdatedAt = new Date();
+
+  await order.save();
+  return order;
+};
+
+/**
+ * Gets order with delivery coordinates for rider
+ * Used by delivery rider to see where customer is
+ */
+export const getOrderForDelivery = async (orderId: string, riderId: string) => {
+  const order = await Order.findOne({
+    _id: orderId,
+    assignedRider: riderId,
+  })
+    .populate("user", "name phoneNumber")
+    .populate("items.menuItem", "name");
+
+  if (!order) throw new AppError("Order not found or not assigned to you", 404);
+
+  return order;
+};
+
+/**
+ * Gets all orders with live coordinates for dispatch board
+ * Useful for tracking delivery on map
+ */
+export const getOrdersForDispatchBoard = async (query: {
+  status?: string;
+  page: number;
+  limit: number;
+}) => {
+  const filter: Record<string, any> = {
+    paymentStatus: "paid",
+    deliveryCoordinates: { $exists: true },
+  };
+  if (query.status) filter.status = query.status;
+
+  const skip = (query.page - 1) * query.limit;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter)
+      .populate("user", "name phoneNumber")
+      .populate("assignedRider", "name phoneNumber")
+      .select(
+        "orderNumber user deliveryAddress deliveryCoordinates areaName status assignedRider createdAt",
+      )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(query.limit),
+    Order.countDocuments(filter),
+  ]);
+
+  return {
+    orders,
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      pages: Math.ceil(total / query.limit),
+    },
+  };
+};
+

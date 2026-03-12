@@ -40,6 +40,16 @@ const deliveryAddressSchema = new Schema(
   { _id: false },
 );
 
+const deliveryCoordinatesSchema = new Schema(
+  {
+    latitude: { type: Number, required: true, min: -90, max: 90 },
+    longitude: { type: Number, required: true, min: -180, max: 180 },
+    accuracy: { type: Number, min: 0 }, // Accuracy radius in meters
+    capturedAt: { type: Date, required: true, default: Date.now },
+  },
+  { _id: false },
+);
+
 const orderSchema = new Schema<IOrder>(
   {
     orderNumber: { type: String, required: true, unique: true },
@@ -83,6 +93,9 @@ const orderSchema = new Schema<IOrder>(
     deliveredAt: { type: Date },
     notes: { type: String, maxlength: 500 },
     cancellationReason: { type: String },
+    deliveryCoordinates: { type: deliveryCoordinatesSchema },
+    areaName: { type: String },
+    liveLocationUpdatedAt: { type: Date },
   },
   {
     timestamps: true,

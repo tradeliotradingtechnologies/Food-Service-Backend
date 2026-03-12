@@ -1214,6 +1214,149 @@ Assign a delivery rider to an order.
 
 ---
 
+#### PATCH `/orders/:id/capture-coordinates` 🔐 `order:update`
+
+Capture live delivery coordinates for an order. Uses browser geolocation API and reverse geocodes to get area name via OpenStreetMap's Nominatim service.
+
+| Field       | Type   | Required | Rules                                   |
+| ----------- | ------ | :------: | --------------------------------------- |
+| `latitude`  | number |    ✅    | Between -90 and 90                      |
+| `longitude` | number |    ✅    | Between -180 and 180                    |
+| `accuracy`  | number |    —     | GPS accuracy in meters (if available)  |
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "message": "Delivery coordinates captured",
+  "data": {
+    "order": {
+      "_id": "...",
+      "orderNumber": "EK-20260303-0005",
+      "deliveryCoordinates": {
+        "latitude": 5.603717,
+        "longitude": -0.186964,
+        "accuracy": 10,
+        "capturedAt": "2026-03-03T10:30:00.000Z"
+      },
+      "areaName": "East Legon",
+      "liveLocationUpdatedAt": "2026-03-03T10:30:00.000Z"
+    }
+  }
+}
+```
+
+> Only available for orders in early stages: `pending`, `confirmed`, `preparing`, or `ready_for_pickup`.
+
+> Automatically performs reverse geocoding to extract area/neighborhood name using free OpenStreetMap Nominatim service.
+
+---
+
+#### PATCH `/orders/:id/update-location` 🔒 Auth (Customer only)
+
+Update delivery location for pending orders. Allows customers to update their exact delivery spot before dispatch.
+
+| Field       | Type   | Required | Rules                                  |
+| ----------- | ------ | :------: | -------------------------------------- |
+| `latitude`  | number |    ✅    | Between -90 and 90                     |
+| `longitude` | number |    ✅    | Between -180 and 180                   |
+| `accuracy`  | number |    —     | GPS accuracy in meters (if available) |
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "message": "Delivery location updated",
+  "data": { "order": { ... } }
+}
+```
+
+> Only works for orders before dispatch (`pending`, `confirmed`, `preparing`, `ready_for_pickup`) and only for unpaid orders.
+
+> Customer can only update their own orders.
+
+---
+
+#### GET `/orders/delivery/:id` 🔐 `delivery:read`
+
+Get order details with delivery coordinates for assigned rider.
+
+**Response** `200`
+
+```json
+{
+  "status": "success",
+  "data": {
+    "order": {
+      "_id": "...",
+      "orderNumber": "EK-20260303-0005",
+      "user": { "name": "Customer Name", "phoneNumber": "+233..." },
+      "items": [{ "name": "Jollof Rice", ... }],
+      "deliveryAddress": { ... },
+      "deliveryCoordinates": {
+        "latitude": 5.603717,
+        "longitude": -0.186964,
+        "accuracy": 10,
+        "capturedAt": "2026-03-03T10:30:00.000Z"
+      },
+      "areaName": "East Legon",
+      "status": "out_for_delivery"
+    }
+  }
+}
+```
+
+> Rider can only access orders assigned to them.
+
+---
+
+#### GET `/orders/dispatch-board` 🔐 `order:read`
+
+Get all paid orders with live coordinates for dispatch management and map tracking.
+
+| Query    | Type    | Default | Description      |
+| -------- | ------- | ------- | ---------------- |
+| `status` | string  | —       | Filter by status |
+| `page`   | integer | `1`     |                  |
+| `limit`  | integer | `20`    | Max 100          |
+
+**Response** `200` — Paginated list of orders with delivery coordinates.
+
+```json
+{
+  "status": "success",
+  "results": 5,
+  "data": {
+    "orders": [
+      {
+        "_id": "...",
+        "orderNumber": "EK-20260303-0005",
+        "user": { "name": "Customer", "phoneNumber": "+233..." },
+        "deliveryAddress": { "location": "East Legon, Accra" },
+        "deliveryCoordinates": {
+          "latitude": 5.603717,
+          "longitude": -0.186964,
+          "capturedAt": "2026-03-03T10:30:00.000Z"
+        },
+        "areaName": "East Legon",
+        "status": "out_for_delivery",
+        "assignedRider": { "name": "Rider Name", "phoneNumber": "+233..." },
+        "createdAt": "2026-03-03T09:15:00.000Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 20, "total": 5, "pages": 1 }
+  }
+}
+```
+
+> Only returns paid orders that have delivery coordinates captured.
+
+> Used for real-time tracking dashboards with map integration.
+
+---
+
 ### 8. Payments
 
 Base path: `/api/payments`

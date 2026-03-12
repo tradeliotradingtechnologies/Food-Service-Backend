@@ -287,6 +287,13 @@ export interface IDeliveryAddress {
   phoneNumber: string;
 }
 
+export interface IDeliveryCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number; // Accuracy radius in meters
+  capturedAt: Date;
+}
+
 export interface IOrder extends Document {
   orderNumber: string;
   user: Types.ObjectId | IUser;
@@ -306,6 +313,9 @@ export interface IOrder extends Document {
   deliveredAt?: Date;
   notes?: string;
   cancellationReason?: string;
+  deliveryCoordinates?: IDeliveryCoordinates;
+  areaName?: string; // Reverse-geocoded area/neighborhood from coordinates
+  liveLocationUpdatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
