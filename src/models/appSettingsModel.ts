@@ -15,7 +15,7 @@ const appSettingsSchema = new Schema(
   { timestamps: true },
 );
 
-appSettingsSchema.index({ key: 1 });
+// appSettingsSchema.index({ key: 1 });
 
 const AppSettings = model("AppSettings", appSettingsSchema);
 
