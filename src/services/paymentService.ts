@@ -75,7 +75,7 @@ export const confirmPayment = async (
   await payment.save();
 
   // Update order payment status
-  await Order.findByIdAndUpdate(payment.order, { paymentStatus: "paid" });
+  await Order.findByIdAndUpdate(payment.order, { paymentStatus: "success" });
 
   return payment;
 };

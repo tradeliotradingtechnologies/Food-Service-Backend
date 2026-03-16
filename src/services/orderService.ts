@@ -258,7 +258,7 @@ export const getAllOrders = async (query: {
   page: number;
   limit: number;
 }) => {
-  const filter: Record<string, any> = { paymentStatus: "paid" };
+  const filter: Record<string, any> = { paymentStatus: "success" };
   if (query.status) filter.status = query.status;
 
   const skip = (query.page - 1) * query.limit;
@@ -608,7 +608,7 @@ export const getOrdersForDispatchBoard = async (query: {
   limit: number;
 }) => {
   const filter: Record<string, any> = {
-    paymentStatus: "paid",
+    paymentStatus: "success",
     deliveryCoordinates: { $exists: true },
   };
   if (query.status) filter.status = query.status;

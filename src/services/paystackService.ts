@@ -179,7 +179,7 @@ export const verifyTransaction = async (reference: string) => {
     };
     await payment.save();
 
-    await Order.findByIdAndUpdate(payment.order, { paymentStatus: "paid" });
+    await Order.findByIdAndUpdate(payment.order, { paymentStatus: "success" });
   } else {
     payment.status = "failed";
     payment.metadata = {
@@ -219,7 +219,7 @@ export const handleWebhookEvent = async (event: Record<string, any>) => {
       };
       await payment.save();
 
-      await Order.findByIdAndUpdate(payment.order, { paymentStatus: "paid" });
+      await Order.findByIdAndUpdate(payment.order, { paymentStatus: "success" });
       break;
     }
 
