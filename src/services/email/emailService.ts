@@ -1,6 +1,12 @@
 import nodemailer from "nodemailer";
 import * as templates from "./emailTemplates.js";
 
+const getPrimaryClientUrl = (): string =>
+  (process.env.CLIENT_URL || "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .find(Boolean) || "http://localhost:3000";
+
 // ── Transport Configuration ─────────────────────────────────────
 // In development: uses Ethereal (fake SMTP) for testing
 // In production: uses real SMTP (SendGrid, Mailgun, AWS SES, etc.)
@@ -101,9 +107,8 @@ export const sendEmailVerification = async (
   name: string,
   verificationToken: string,
 ): Promise<string | null> => {
-  const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
+  const baseUrl = getPrimaryClientUrl();
   const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
-  console.log("Verification URL:", verificationUrl); // Debug log
   const { subject, html } = templates.emailVerification(name, verificationUrl);
   return sendMail({ to: email, subject, html });
 };
@@ -113,9 +118,8 @@ export const sendPasswordResetEmail = async (
   name: string,
   resetToken: string,
 ): Promise<string | null> => {
-  const baseUrl = process.env.CLIENT_URL || "http://localhost:3000";
+  const baseUrl = getPrimaryClientUrl();
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
-  console.log("Password Reset URL:", resetUrl); // Debug log
   const { subject, html } = templates.passwordReset(name, resetUrl);
   return sendMail({ to: email, subject, html });
 };

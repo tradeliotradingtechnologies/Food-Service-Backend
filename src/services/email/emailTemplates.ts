@@ -8,6 +8,12 @@ const TEXT_COLOR = "#2c3e50";
 const LIGHT_TEXT = "#7f8c8d";
 const BORDER_COLOR = "#e8ddd3";
 
+const CLIENT_BASE_URL =
+  (process.env.CLIENT_URL || "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .find(Boolean) || "http://localhost:3000";
+
 // ── Base Layout Wrapper ─────────────────────────────────────────
 
 const baseLayout = (content: string, preheader = ""): string => `
@@ -79,7 +85,7 @@ export const welcomeEmail = (
       </ul>
     </div>
     <p style="text-align:center; margin:28px 0;">
-      <a href="${process.env.CLIENT_URL || "http://localhost:3000"}/menu" class="btn">Explore Our Menu</a>
+      <a href="${CLIENT_BASE_URL}/menu" class="btn">Explore Our Menu</a>
     </p>
     <p>Bon appétit! 🍽️<br><strong>— The Erica's Kitchen Team</strong></p>
     `,
@@ -207,7 +213,7 @@ export const orderConfirmation = (data: {
       <p><strong>Payment:</strong> ${data.paymentMethod.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
       
       <p style="text-align:center; margin:28px 0;">
-        <a href="${process.env.CLIENT_URL || "http://localhost:3000"}/orders" class="btn">Track Your Order</a>
+        <a href="${CLIENT_BASE_URL}/orders" class="btn">Track Your Order</a>
       </p>
       `,
       `Your order #${data.orderNumber} has been confirmed!`,
@@ -258,7 +264,7 @@ export const orderStatusUpdate = (data: {
       ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
       
       <p style="text-align:center; margin:28px 0;">
-        <a href="${process.env.CLIENT_URL || "http://localhost:3000"}/orders" class="btn">View Order Details</a>
+        <a href="${CLIENT_BASE_URL}/orders" class="btn">View Order Details</a>
       </p>
       `,
       `Your order #${data.orderNumber} is now ${label}.`,
@@ -356,7 +362,7 @@ export const newsletterWelcome = (
       <li>👨‍🍳 Behind-the-scenes stories from our kitchen</li>
     </ul>
     <p style="text-align:center; margin:28px 0;">
-      <a href="${process.env.CLIENT_URL || "http://localhost:3000"}/menu" class="btn">Check Today's Menu</a>
+      <a href="${CLIENT_BASE_URL}/menu" class="btn">Check Today's Menu</a>
     </p>
     <p style="font-size:12px; color:${LIGHT_TEXT};">You can unsubscribe at any time by clicking the unsubscribe link in our emails.</p>
     `,

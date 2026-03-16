@@ -34,6 +34,7 @@
   - [Reservations](#14-reservations)
 - [Enums & Constants](#enums--constants)
 - [Data Models](#data-models)
+- [Deployment](#deployment)
 - [Environment Variables](#environment-variables)
 
 ---
@@ -2672,38 +2673,74 @@ pending → confirmed → seated → completed
 
 ---
 
+## Deployment
+
+### Pre-deploy checklist
+
+1. Copy `.env.example` to `.env` and set production secrets
+2. Set `NODE_ENV=production`
+3. Set `RUN_SEEDERS_ON_BOOT=false` (recommended for production)
+4. Set `CLIENT_URL` to allowed frontend origins (comma-separated)
+5. Set required third-party credentials (MongoDB, SMTP, Paystack, Cloudinary as needed)
+
+### Build validation
+
+```bash
+npm ci
+npm run predeploy
+```
+
+### Start with PM2
+
+```bash
+npm run start:pm2
+pm2 save
+```
+
+### Start with Docker
+
+```bash
+docker build -t ericas-kitchen-backend .
+docker run --env-file .env -p 3000:3000 --name ericas-kitchen-api ericas-kitchen-backend
+```
+
+The API exposes `GET /health` for load balancer and container health checks.
+
+---
+
 ## Environment Variables
 
 Create a `.env` file in the project root. All required variables must be set for the server to start.
 
-| Variable                  | Required | Default       | Description                                         |
-| ------------------------- | :------: | ------------- | --------------------------------------------------- |
-| `NODE_ENV`                |    —     | `development` | `development` \| `production` \| `test`             |
-| `PORT`                    |    —     | `3000`        | Server port                                         |
-| `DB_URI`                  |    ✅    | —             | MongoDB connection string                           |
-| `JWT_SECRET`              |    ✅    | —             | Min 32 chars — signs access tokens                  |
-| `JWT_REFRESH_SECRET`      |    ✅    | —             | Min 32 chars — signs refresh tokens                 |
-| `JWT_ACCESS_EXPIRES_IN`   |    —     | `15m`         | Access token TTL                                    |
-| `JWT_REFRESH_EXPIRES_IN`  |    —     | `7d`          | Refresh token TTL                                   |
-| `BCRYPT_SALT_ROUNDS`      |    —     | `12`          | Bcrypt cost factor                                  |
-| `API_KEY`                 |    ✅    | —             | Min 32 chars — `X-API-Key` header value             |
-| `CLIENT_URL`              |    —     | —             | Allowed CORS origin(s), comma-separated             |
-| `GOOGLE_CLIENT_ID`        |    —     | —             | Google OAuth client ID                              |
-| `APPLE_CLIENT_ID`         |    —     | —             | Apple Sign-In client ID                             |
-| `PAYSTACK_SECRET_KEY`     |   —\*    | —             | Paystack secret key (`sk_test_...` / `sk_live_...`) |
-| `PAYSTACK_PUBLIC_KEY`     |    —     | —             | Paystack public key (frontend reference only)       |
-| `PAYSTACK_WEBHOOK_SECRET` |    —     | —             | Additional webhook validation secret                |
-| `PAYSTACK_CALLBACK_URL`   |    —     | —             | Default redirect URL after Paystack payment         |
-| `CLOUDINARY_CLOUD_NAME`   |    —     | —             | Cloudinary cloud name                               |
-| `CLOUDINARY_API_KEY`      |    —     | —             | Cloudinary API key                                  |
-| `CLOUDINARY_API_SECRET`   |    —     | —             | Cloudinary API secret                               |
-| `SMTP_HOST`               |    —     | —             | SMTP server host                                    |
-| `SMTP_PORT`               |    —     | —             | SMTP server port                                    |
-| `SMTP_SECURE`             |    —     | —             | Use TLS (`true`/`false`)                            |
-| `SMTP_USER`               |    —     | —             | SMTP username                                       |
-| `SMTP_PASS`               |    —     | —             | SMTP password                                       |
-| `EMAIL_FROM`              |    —     | —             | Sender email address                                |
-| `EMAIL_REPLY_TO`          |    —     | —             | Reply-to email address                              |
+| Variable                  | Required | Default       | Description                                                             |
+| ------------------------- | :------: | ------------- | ----------------------------------------------------------------------- |
+| `NODE_ENV`                |    —     | `development` | `development` \| `production` \| `test`                                 |
+| `PORT`                    |    —     | `3000`        | Server port                                                             |
+| `RUN_SEEDERS_ON_BOOT`     |    —     | `auto`        | `auto` \| `true` \| `false`                                             |
+| `DB_URI`                  |    ✅    | —             | MongoDB connection string                                               |
+| `JWT_SECRET`              |    ✅    | —             | Min 32 chars — signs access tokens                                      |
+| `JWT_REFRESH_SECRET`      |    ✅    | —             | Min 32 chars — signs refresh tokens                                     |
+| `JWT_ACCESS_EXPIRES_IN`   |    —     | `15m`         | Access token TTL                                                        |
+| `JWT_REFRESH_EXPIRES_IN`  |    —     | `7d`          | Refresh token TTL                                                       |
+| `BCRYPT_SALT_ROUNDS`      |    —     | `12`          | Bcrypt cost factor                                                      |
+| `API_KEY`                 |    ✅    | —             | Min 32 chars — `X-API-Key` header value                                 |
+| `CLIENT_URL`              |    —     | —             | Allowed CORS origin(s), comma-separated (first is used for email links) |
+| `GOOGLE_CLIENT_ID`        |    —     | —             | Google OAuth client ID                                                  |
+| `APPLE_CLIENT_ID`         |    —     | —             | Apple Sign-In client ID                                                 |
+| `PAYSTACK_SECRET_KEY`     |   —\*    | —             | Paystack secret key (`sk_test_...` / `sk_live_...`)                     |
+| `PAYSTACK_PUBLIC_KEY`     |    —     | —             | Paystack public key (frontend reference only)                           |
+| `PAYSTACK_WEBHOOK_SECRET` |    —     | —             | Additional webhook validation secret                                    |
+| `PAYSTACK_CALLBACK_URL`   |    —     | —             | Default redirect URL after Paystack payment                             |
+| `CLOUDINARY_CLOUD_NAME`   |    —     | —             | Cloudinary cloud name                                                   |
+| `CLOUDINARY_API_KEY`      |    —     | —             | Cloudinary API key                                                      |
+| `CLOUDINARY_API_SECRET`   |    —     | —             | Cloudinary API secret                                                   |
+| `SMTP_HOST`               |    —     | —             | SMTP server host                                                        |
+| `SMTP_PORT`               |    —     | —             | SMTP server port                                                        |
+| `SMTP_SECURE`             |    —     | —             | Use TLS (`true`/`false`)                                                |
+| `SMTP_USER`               |    —     | —             | SMTP username                                                           |
+| `SMTP_PASS`               |    —     | —             | SMTP password                                                           |
+| `EMAIL_FROM`              |    —     | —             | Sender email address                                                    |
+| `EMAIL_REPLY_TO`          |    —     | —             | Reply-to email address                                                  |
 
 > \* `PAYSTACK_SECRET_KEY` is required if you want Paystack payments to work.
 

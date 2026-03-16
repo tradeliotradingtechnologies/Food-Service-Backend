@@ -2,10 +2,7 @@
 node_modules
 npm-debug.log*
 
-# ── Source (not needed in image — we copy dist/) ──────────────
-src
-tsconfig.json
-*.ts
+# ── Source (needed for multi-stage build compile step) ─────────
 
 # ── Dev & editor files ────────────────────────────────────────
 .git

@@ -17,8 +17,10 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
+    "predeploy": "npm run clean && npm run typecheck && npm run build",
     "start": "node dist/server.js",
     "start:prod": "npm run build && NODE_ENV=production node dist/server.js",
+    "start:pm2": "npm run build && mkdir -p logs && pm2 start ecosystem.config.cjs",
     "seed": "tsx src/dbseeders/seed.ts",
     "seed:reset": "tsx src/dbseeders/seed.ts --reset",
     "typecheck": "tsc --noEmit",

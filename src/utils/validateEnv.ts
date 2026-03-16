@@ -11,6 +11,7 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   PORT: z.string().default("3000"),
+  RUN_SEEDERS_ON_BOOT: z.enum(["true", "false", "auto"]).default("auto"),
 
   // ── Database ──────────────────────────────────────────────────
   DB_URI: z.url("Invalid DB_URI — must be a valid MongoDB connection string"),
@@ -30,7 +31,7 @@ const envSchema = z.object({
   API_KEY: z.string().min(32, "API_KEY must be at least 32 characters"),
 
   // ── Client ────────────────────────────────────────────────────
-  CLIENT_URL: z.url("Invalid CLIENT_URL").optional(),
+  CLIENT_URL: z.string().optional(),
 
   // ── OAuth (optional in dev, recommended in prod) ──────────────
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -48,6 +49,7 @@ const envSchema = z.object({
     .optional(),
   PAYSTACK_PUBLIC_KEY: z.string().optional(),
   PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
+  PAYSTACK_CALLBACK_URL: z.url("Invalid PAYSTACK_CALLBACK_URL").optional(),
 
   // ── SMTP (required in production) ─────────────────────────────
   SMTP_HOST: z.string().optional(),

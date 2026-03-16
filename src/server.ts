@@ -7,6 +7,9 @@ import type { Server } from "http";
 // ── 1. Validate environment ─────────────────────────────────────
 const env = validateEnv();
 const PORT = env.PORT;
+const shouldRunSeeders =
+  env.RUN_SEEDERS_ON_BOOT === "true" ||
+  (env.RUN_SEEDERS_ON_BOOT === "auto" && env.NODE_ENV !== "production");
 
 let server: Server;
 
@@ -16,8 +19,14 @@ mongoose
   .then(async () => {
     console.log(`✅ Connected to MongoDB (${env.NODE_ENV})`);
 
-    // Run seeders (idempotent — safe to run every startup)
-    await runSeeders();
+    if (shouldRunSeeders) {
+      // Run seeders when explicitly enabled (or auto in non-production)
+      await runSeeders();
+    } else {
+      console.log(
+        "⏭️  Skipping seeders on boot (RUN_SEEDERS_ON_BOOT disabled)",
+      );
+    }
 
     server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT} [${env.NODE_ENV}]`);
