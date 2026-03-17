@@ -1,9 +1,10 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, type Document, type Types } from "mongoose";
 
-export interface IExtraItem {
+export interface IExtraItem extends Document {
   name: string;
   price: number;
   description?: string;
+  category: Types.ObjectId;
 }
 
 export const extraItemSchema = new Schema<IExtraItem>(
@@ -23,9 +24,15 @@ export const extraItemSchema = new Schema<IExtraItem>(
       required: false,
       trim: true,
     },
+    category: {
+      type: Schema.Types.ObjectId,
+      ref: "ExtraItemsCategory",
+      required: true,
+      index: true,
+    },
   },
   {
-    _id: false,
+    timestamps: true,
   },
 );
 

@@ -1,18 +1,29 @@
 import { Schema, model, type Document } from "mongoose";
-import { extraItemSchema, type IExtraItem } from "./extraItems.js";
 
 export interface IExtraItemsCategory extends Document {
   name: string;
-  items: IExtraItem[];
 }
 
-const ExtraItemsCategorySchema = new Schema<IExtraItemsCategory>({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
+const ExtraItemsCategorySchema = new Schema<IExtraItemsCategory>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
   },
-  items: [extraItemSchema],
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
+);
+
+ExtraItemsCategorySchema.virtual("items", {
+  ref: "ExtraItem",
+  localField: "_id",
+  foreignField: "category",
 });
 
 const ExtraItemsCategory = model<IExtraItemsCategory>(

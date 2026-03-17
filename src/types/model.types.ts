@@ -1,5 +1,7 @@
 import { Document, Types } from "mongoose";
 
+export type Ref<T = unknown> = Types.ObjectId | string | T;
+
 // ──────────────────────────────── Enums / Literals ────────────────────────────────
 
 export const PERMISSION_RESOURCES = [
@@ -109,7 +111,7 @@ export interface IUser extends Document, ISoftDeletable {
   password?: string;
   passwordConfirm?: string;
   authMethod: AuthMethod;
-  role: Types.ObjectId | IRole;
+  role: Ref<IRole>;
   avatar?: string;
   phoneNumber?: string;
   addresses: Types.ObjectId[];
@@ -140,7 +142,7 @@ export interface IUser extends Document, ISoftDeletable {
 // ──────────────────────────────── OAuth Account ────────────────────────────────
 
 export interface IOAuthAccount extends Document {
-  user: Types.ObjectId | IUser;
+  user: Ref<IUser>;
   provider: OAuthProvider;
   providerId: string;
   email?: string;
@@ -157,7 +159,7 @@ export interface IOAuthAccount extends Document {
 // ──────────────────────────────── Refresh Token ────────────────────────────────
 
 export interface IRefreshToken extends Document {
-  user: Types.ObjectId | IUser;
+  user: Ref<IUser>;
   token: string;
   family: string;
   expiresAt: Date;
@@ -172,7 +174,7 @@ export interface IRefreshToken extends Document {
 // ──────────────────────────────── Address ────────────────────────────────
 
 export interface IAddress extends Document, ISoftDeletable {
-  user: Types.ObjectId | IUser;
+  user: Ref<IUser>;
   label?: string;
   location: string;
   landmark?: string;
@@ -214,7 +216,7 @@ export interface IMenuItem extends Document, ISoftDeletable {
   description: string;
   price: number;
   currency: string;
-  category: Types.ObjectId | ICategory;
+  category: Ref<ICategory>;
   images: string[];
   preparationTime: number;
   ingredients: string[];
@@ -225,7 +227,7 @@ export interface IMenuItem extends Document, ISoftDeletable {
   likes: number;
   averageRating: number;
   totalReviews: number;
-  createdBy: Types.ObjectId | IUser;
+  createdBy: Ref<IUser>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -235,25 +237,25 @@ export interface IMenuItem extends Document, ISoftDeletable {
 export interface IDailySpecial extends Document, ISoftDeletable {
   title: string;
   description: string;
-  menuItem: Types.ObjectId | IMenuItem;
+  menuItem: Ref<IMenuItem>;
   date: Date;
   isActive: boolean;
   sortOrder: number;
-  createdBy: Types.ObjectId | IUser;
+  createdBy: Ref<IUser>;
   createdAt: Date;
 }
 
 // ──────────────────────────────── Cart ────────────────────────────────
 
 export interface ICartItem {
-  menuItem: Types.ObjectId | IMenuItem;
+  menuItem: Ref<IMenuItem>;
   quantity: number;
   unitPrice: number;
   addedAt: Date;
 }
 
 export interface ICart extends Document {
-  user: Types.ObjectId | IUser;
+  user: Ref<IUser>;
   items: ICartItem[];
   totalAmount: number;
   expiresAt?: Date;
@@ -263,7 +265,7 @@ export interface ICart extends Document {
 // ──────────────────────────────── Order ────────────────────────────────
 
 export interface IOrderItem {
-  menuItem: Types.ObjectId | IMenuItem;
+  menuItem: Ref<IMenuItem>;
   name: string;
   quantity: number;
   unitPrice: number;
@@ -272,7 +274,7 @@ export interface IOrderItem {
 
 export interface IOrderStatusHistory {
   status: OrderStatus;
-  changedBy?: Types.ObjectId | IUser;
+  changedBy?: Ref<IUser>;
   changedAt: Date;
   note?: string;
 }
@@ -296,7 +298,7 @@ export interface IDeliveryCoordinates {
 
 export interface IOrder extends Document {
   orderNumber: string;
-  user: Types.ObjectId | IUser;
+  user: Ref<IUser>;
   items: IOrderItem[];
   deliveryAddress: IDeliveryAddress;
   deliveryFee: number;
@@ -308,7 +310,7 @@ export interface IOrder extends Document {
   statusHistory: IOrderStatusHistory[];
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
-  assignedRider?: Types.ObjectId | IUser;
+  assignedRider?: Ref<IUser>;
   estimatedDelivery?: Date;
   deliveredAt?: Date;
   notes?: string;
@@ -370,7 +372,7 @@ export interface IAppSettings extends Document {
     | IProcessingFee
     | unknown;
   description?: string;
-  updatedBy?: Types.ObjectId | IUser;
+  updatedBy?: Ref<IUser>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -378,8 +380,8 @@ export interface IAppSettings extends Document {
 // ──────────────────────────────── Payment ────────────────────────────────
 
 export interface IPayment extends Document {
-  order: Types.ObjectId | IOrder;
-  user: Types.ObjectId | IUser;
+  order: Ref<IOrder>;
+  user: Ref<IUser>;
   amount: number;
   currency: string;
   method: PaymentMethod;
@@ -396,21 +398,21 @@ export interface IPayment extends Document {
 // ──────────────────────────────── Testimonial ────────────────────────────────
 
 export interface ITestimonial extends Document, ISoftDeletable {
-  user: Types.ObjectId | IUser;
+  user: Ref<IUser>;
   content: string;
   rating: number;
-  menuItem?: Types.ObjectId | IMenuItem;
+  menuItem?: Ref<IMenuItem>;
   isApproved: boolean;
   isFeatured: boolean;
-  approvedBy?: Types.ObjectId | IUser;
+  approvedBy?: Ref<IUser>;
   createdAt: Date;
 }
 
 // ──────────────────────────────── Menu Item Like ────────────────────────────────
 
 export interface IMenuItemLike extends Document {
-  user: Types.ObjectId | IUser;
-  menuItem: Types.ObjectId | IMenuItem;
+  user: Ref<IUser>;
+  menuItem: Ref<IMenuItem>;
   createdAt: Date;
 }
 
@@ -437,7 +439,7 @@ export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
 export interface IReservation extends Document, ISoftDeletable {
   reservationNumber: string;
-  user?: Types.ObjectId | IUser;
+  user?: Ref<IUser>;
   guestName: string;
   guestEmail?: string;
   guestPhone: string;
@@ -447,7 +449,7 @@ export interface IReservation extends Document, ISoftDeletable {
   tableNumber?: number;
   status: ReservationStatus;
   specialRequests?: string;
-  confirmedBy?: Types.ObjectId | IUser;
+  confirmedBy?: Ref<IUser>;
   cancellationReason?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -456,7 +458,7 @@ export interface IReservation extends Document, ISoftDeletable {
 // ──────────────────────────────── Audit Log ────────────────────────────────
 
 export interface IAuditLog extends Document {
-  actor?: Types.ObjectId | IUser;
+  actor?: Ref<IUser>;
   action: string;
   resource: string;
   resourceId?: Types.ObjectId;
