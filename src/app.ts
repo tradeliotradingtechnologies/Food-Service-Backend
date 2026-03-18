@@ -30,6 +30,8 @@ import adminRoute from "./routes/adminRoute.js";
 import analyticsRoute from "./routes/analyticsRoute.js";
 import reservationRoute from "./routes/reservationRoute.js";
 import uploadRoute from "./routes/uploadRoute.js";
+import extraItemsRoute from "./routes/extraItemsRoute.js";
+import extraItemsCategoryRoute from "./routes/extraItemsCategoryRoute.js";
 import AppError from "./utils/appError.js";
 import globalErrorHandler from "./middleware/errorHandler.js";
 
@@ -157,6 +159,8 @@ app.use("/api/v1/admin", adminRoute);
 app.use("/api/v1/analytics", analyticsRoute);
 app.use("/api/v1/reservations", reservationRoute);
 app.use("/api/v1/uploads", uploadRoute);
+app.use("/api/v1/extra-items", extraItemsRoute);
+app.use("/api/v1/extra-items-categories", extraItemsCategoryRoute);
 
 // ── 404 Catch-All ───────────────────────────────────────────────
 app.all("*path", (req, _res, next) => {

@@ -65,6 +65,7 @@ export const getMenuItems = async (query: MenuItemQuery) => {
   const [items, total] = await Promise.all([
     MenuItem.find(filter)
       .populate("category", "name slug")
+      .populate("extraItems", "name price")
       .sort(sortObj)
       .skip(skip)
       .limit(limit),
@@ -83,7 +84,9 @@ export const getMenuItems = async (query: MenuItemQuery) => {
 };
 
 export const getMenuItemById = async (id: string) => {
-  const item = await MenuItem.findById(id).populate("category", "name slug");
+  const item = await MenuItem.findById(id)
+    .populate("category", "name slug")
+    .populate("extraItems", "name price category");
   if (!item) throw new AppError("Menu item not found", 404);
   return item;
 };
@@ -93,6 +96,7 @@ export const getMenuItemBySlug = async (slug: string) => {
     "category",
     "name slug",
   );
+  await item?.populate("extraItems", "name price category");
   if (!item) throw new AppError("Menu item not found", 404);
   return item;
 };
@@ -101,7 +105,9 @@ export const updateMenuItem = async (id: string, data: Record<string, any>) => {
   const item = await MenuItem.findByIdAndUpdate(id, data, {
     returnDocument: "after",
     runValidators: true,
-  }).populate("category", "name slug");
+  })
+    .populate("category", "name slug")
+    .populate("extraItems", "name price category");
   if (!item) throw new AppError("Menu item not found", 404);
   return item;
 };

@@ -15,6 +15,7 @@ export const addToCart = catchAsync(async (req: Request, res: Response) => {
     req.user._id,
     req.body.menuItem,
     req.body.quantity,
+    req.body.selectedExtras,
   );
   res.status(200).json({
     status: "success",
@@ -23,11 +24,12 @@ export const addToCart = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const updateCartItem = catchAsync(
-  async (req: Request<{ menuItemId: string }>, res: Response) => {
+  async (req: Request<{ itemId: string }>, res: Response) => {
     const cart = await cartService.updateCartItem(
       req.user._id,
-      req.params.menuItemId,
+      req.params.itemId,
       req.body.quantity,
+      req.body.selectedExtras,
     );
     res.status(200).json({
       status: "success",
@@ -37,10 +39,10 @@ export const updateCartItem = catchAsync(
 );
 
 export const removeFromCart = catchAsync(
-  async (req: Request<{ menuItemId: string }>, res: Response) => {
+  async (req: Request<{ itemId: string }>, res: Response) => {
     const cart = await cartService.removeFromCart(
       req.user._id,
-      req.params.menuItemId,
+      req.params.itemId,
     );
     res.status(200).json({
       status: "success",

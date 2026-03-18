@@ -16,12 +16,12 @@ router.use(authenticate);
 router.get("/", ctrl.getCart);
 router.post("/items", validate(addToCartSchema), ctrl.addToCart);
 router.patch(
-  "/items/:menuItemId",
+  "/items/:itemId",
   validate(updateCartItemSchema),
   ctrl.updateCartItem,
 );
 router.delete(
-  "/items/:menuItemId",
+  "/items/:itemId",
   validate(removeCartItemSchema),
   ctrl.removeFromCart,
 );

@@ -227,6 +227,7 @@ export interface IMenuItem extends Document, ISoftDeletable {
   likes: number;
   averageRating: number;
   totalReviews: number;
+  extraItems: Types.ObjectId[];
   createdBy: Ref<IUser>;
   createdAt: Date;
   updatedAt: Date;
@@ -248,9 +249,18 @@ export interface IDailySpecial extends Document, ISoftDeletable {
 // ──────────────────────────────── Cart ────────────────────────────────
 
 export interface ICartItem {
+  _id?: Types.ObjectId;
   menuItem: Ref<IMenuItem>;
   quantity: number;
   unitPrice: number;
+  selectedExtras: {
+    extraItem: Types.ObjectId;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }[];
+  lineTotal: number;
   addedAt: Date;
 }
 
@@ -269,6 +279,13 @@ export interface IOrderItem {
   name: string;
   quantity: number;
   unitPrice: number;
+  extraItems: {
+    extraItem: Types.ObjectId;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }[];
   lineTotal: number;
 }
 

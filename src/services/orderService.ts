@@ -178,12 +178,26 @@ export const createOrder = async (
       );
     }
 
-    const lineTotal = menuItem.price * cartItem.quantity;
+    const extraItems = (cartItem.selectedExtras || []).map((extra) => ({
+      extraItem: extra.extraItem,
+      name: extra.name,
+      quantity: extra.quantity,
+      unitPrice: extra.unitPrice,
+      lineTotal: extra.lineTotal,
+    }));
+
+    const extrasPerUnit = extraItems.reduce(
+      (sum, extra) => sum + extra.lineTotal,
+      0,
+    );
+
+    const lineTotal = (menuItem.price + extrasPerUnit) * cartItem.quantity;
     orderItems.push({
       menuItem: menuItem._id,
       name: menuItem.name,
       quantity: cartItem.quantity,
       unitPrice: menuItem.price,
+      extraItems,
       lineTotal,
     });
     subtotal += lineTotal;

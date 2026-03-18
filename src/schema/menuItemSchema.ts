@@ -19,6 +19,11 @@ export const createMenuItemSchema = z.object({
       .pipe(z.number().min(0, "Price must be non-negative")),
     currency: z.string().length(3).optional(),
     category: z.string().min(1, "Category is required"),
+    extraItems: z
+      .union([z.array(z.string()), z.string()])
+      .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
+      .pipe(z.array(z.string()))
+      .optional(),
     preparationTime: z
       .union([z.number(), z.string()])
       .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))
@@ -61,6 +66,11 @@ export const updateMenuItemSchema = z.object({
         .optional(),
       currency: z.string().length(3).optional(),
       category: z.string().min(1).optional(),
+      extraItems: z
+        .union([z.array(z.string()), z.string()])
+        .transform((val) => (typeof val === "string" ? JSON.parse(val) : val))
+        .pipe(z.array(z.string()))
+        .optional(),
       preparationTime: z
         .union([z.number(), z.string()])
         .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val))

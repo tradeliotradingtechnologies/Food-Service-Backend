@@ -12,6 +12,22 @@ const orderItemSchema = new Schema(
     name: { type: String, required: true }, // Snapshot
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },
+    extraItems: {
+      type: [
+        {
+          extraItem: {
+            type: Schema.Types.ObjectId,
+            ref: "ExtraItem",
+            required: true,
+          },
+          name: { type: String, required: true },
+          quantity: { type: Number, required: true, min: 1 },
+          unitPrice: { type: Number, required: true, min: 0 },
+          lineTotal: { type: Number, required: true, min: 0 },
+        },
+      ],
+      default: [],
+    },
     lineTotal: { type: Number, required: true, min: 0 },
   },
   { _id: false },
