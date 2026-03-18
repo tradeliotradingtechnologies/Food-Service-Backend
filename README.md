@@ -1,7 +1,7 @@
 # Erica's Kitchen — API Documentation
 
 > **Version**: 1.0.0  
-> **Base URL**: `http://localhost:3000/api`  
+> **Base URL**: `http://localhost:3000/api/v1`  
 > **Content-Type**: `application/json`  
 > **Authentication**: API Key + HTTP-only cookies (JWT)  
 > **Payment Provider**: Paystack
@@ -32,6 +32,7 @@
   - [Admin](#12-admin)
   - [Analytics](#13-analytics)
   - [Reservations](#14-reservations)
+  - [Extra Items & Extra Item Categories](#15-extra-items--extra-item-categories)
 - [Enums & Constants](#enums--constants)
 - [Data Models](#data-models)
 - [Deployment](#deployment)
@@ -48,11 +49,11 @@ The API allows requests from the client URL configured on the server (default `h
 ```javascript
 // Axios
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = "http://localhost:3000/api";
+axios.defaults.baseURL = "http://localhost:3000/api/v1";
 axios.defaults.headers.common["X-API-Key"] = "YOUR_API_KEY"; // ← required
 
 // Fetch
-fetch("/api/auth/login", {
+fetch("/api/v1/auth/login", {
   method: "POST",
   credentials: "include", // ← required
   headers: {
@@ -108,18 +109,18 @@ API_KEY=your_generated_key_here
 
 The API uses **HTTP-only cookies** for token storage — the frontend never handles raw JWTs.
 
-| Cookie         | Lifetime | Sent To                  | Purpose                    |
-| -------------- | -------- | ------------------------ | -------------------------- |
-| `accessToken`  | 15 min   | All `/api/*` requests    | Authenticates each request |
-| `refreshToken` | 7 days   | Only `/api/auth/refresh` | Obtains a new access token |
+| Cookie         | Lifetime | Sent To                     | Purpose                    |
+| -------------- | -------- | --------------------------- | -------------------------- |
+| `accessToken`  | 15 min   | All `/api/*` requests       | Authenticates each request |
+| `refreshToken` | 7 days   | Only `/api/v1/auth/refresh` | Obtains a new access token |
 
 ### Auth Flow
 
 ```
-1. POST /api/auth/login   → Server sets both cookies automatically
+1. POST /api/v1/auth/login   → Server sets both cookies automatically
 2. All requests            → Browser sends accessToken cookie automatically
-3. 401 response            → Call POST /api/auth/refresh to get new tokens
-4. POST /api/auth/logout   → Server clears both cookies
+3. 401 response            → Call POST /api/v1/auth/refresh to get new tokens
+4. POST /api/v1/auth/logout   → Server clears both cookies
 ```
 
 ### Recommended Axios Interceptor
@@ -332,7 +333,7 @@ PAYSTACK_CALLBACK_URL=https://...        # Optional — default redirect after p
 
 ### 1. Auth
 
-Base path: `/api/auth`
+Base path: `/api/v1/auth`
 
 #### POST `/auth/signup`
 
@@ -599,7 +600,7 @@ Update the current user's profile info.
 
 ### 2. Categories
 
-Base path: `/api/categories`
+Base path: `/api/v1/categories`
 
 #### GET `/categories`
 
@@ -683,7 +684,7 @@ Delete a category.
 
 ### 3. Menu Items
 
-Base path: `/api/menu-items`
+Base path: `/api/v1/menu-items`
 
 #### GET `/menu-items`
 
@@ -778,6 +779,7 @@ Create a new menu item.
 | `price`           | number   |    ✅    | ≥ 0 (GHS)                               |
 | `currency`        | string   |    —     | 3 chars, default `GHS`                  |
 | `category`        | string   |    ✅    | Category ObjectId                       |
+| `extraItems`      | string[] |    —     | Allowed ExtraItem ObjectIds             |
 | `images`          | string[] |    ✅    | Array of URLs, min 1                    |
 | `preparationTime` | integer  |    ✅    | ≥ 1 (minutes)                           |
 | `ingredients`     | string[] |    —     |                                         |
@@ -806,7 +808,7 @@ Update a menu item. All fields optional.
 
 ### 4. Daily Specials
 
-Base path: `/api/daily-specials`
+Base path: `/api/v1/daily-specials`
 
 #### GET `/daily-specials/today`
 
@@ -879,7 +881,7 @@ Get all daily specials.
 
 ### 5. Addresses
 
-Base path: `/api/addresses` — 🔒 All routes require auth
+Base path: `/api/v1/addresses` — 🔒 All routes require auth
 
 #### GET `/addresses`
 
@@ -947,7 +949,7 @@ All fields optional.
 
 ### 6. Cart
 
-Base path: `/api/cart` — 🔒 All routes require auth. Each user has one cart.
+Base path: `/api/v1/cart` — 🔒 All routes require auth. Each user has one cart.
 
 #### GET `/cart`
 
@@ -964,6 +966,7 @@ Get the current user's cart with populated menu items.
       "user": "...",
       "items": [
         {
+          "_id": "cartItemId123",
           "menuItem": {
             "_id": "...",
             "name": "Grilled Tilapia",
@@ -972,10 +975,24 @@ Get the current user's cart with populated menu items.
           },
           "quantity": 1,
           "unitPrice": 70.0,
+          "selectedExtras": [
+            {
+              "extraItem": {
+                "_id": "...",
+                "name": "Extra Pepper Sauce",
+                "price": 2.5
+              },
+              "name": "Extra Pepper Sauce",
+              "quantity": 2,
+              "unitPrice": 2.5,
+              "lineTotal": 5
+            }
+          ],
+          "lineTotal": 75.0,
           "addedAt": "2026-03-03T..."
         }
       ],
-      "totalAmount": 70.0
+      "totalAmount": 75.0
     }
   }
 }
@@ -985,36 +1002,49 @@ Get the current user's cart with populated menu items.
 
 #### POST `/cart/items`
 
-Add an item to the cart. If the item already exists, its quantity is updated.
+Add an item to the cart with optional extras. If the same menu item with the same extras already exists, its quantity is updated.
 
-| Field      | Type    | Required | Rules             |
-| ---------- | ------- | :------: | ----------------- |
-| `menuItem` | string  |    ✅    | MenuItem ObjectId |
-| `quantity` | integer |    —     | ≥ 1 (default 1)   |
+| Field            | Type    | Required | Rules                         |
+| ---------------- | ------- | :------: | ----------------------------- |
+| `menuItem`       | string  |    ✅    | MenuItem ObjectId             |
+| `quantity`       | integer |    —     | ≥ 1 (default 1)               |
+| `selectedExtras` | array   |    —     | Array of selected extra items |
+
+`selectedExtras` shape:
+
+| Field       | Type    | Required | Rules                                         |
+| ----------- | ------- | :------: | --------------------------------------------- |
+| `extraItem` | string  |    ✅    | ExtraItem ObjectId allowed for this menu item |
+| `quantity`  | integer |    —     | ≥ 1 (default 1)                               |
 
 **Response** `200` — Returns the full updated cart.
 
 ---
 
-#### PATCH `/cart/items/:menuItemId`
+#### PATCH `/cart/items/:itemId`
 
-Update quantity of an item in the cart.
+Update quantity and/or selected extras for a specific cart line item.
 
-| Param        | Description           |
-| ------------ | --------------------- |
-| `menuItemId` | The menu item's `_id` |
+| Param    | Description           |
+| -------- | --------------------- |
+| `itemId` | The cart item's `_id` |
 
-| Field      | Type    | Required |
-| ---------- | ------- | :------: |
-| `quantity` | integer | ✅ (≥ 1) |
+| Field            | Type    | Required |
+| ---------------- | ------- | :------: |
+| `quantity`       | integer | ✅ (≥ 1) |
+| `selectedExtras` | array   |    —     |
 
 **Response** `200` — Updated cart.
 
 ---
 
-#### DELETE `/cart/items/:menuItemId`
+#### DELETE `/cart/items/:itemId`
 
 Remove an item from the cart.
+
+| Param    | Description           |
+| -------- | --------------------- |
+| `itemId` | The cart item's `_id` |
 
 **Response** `200` — Updated cart.
 
@@ -1030,13 +1060,13 @@ Clear the entire cart.
 
 ### 7. Orders
 
-Base path: `/api/orders` — 🔒 All routes require auth
+Base path: `/api/v1/orders` — 🔒 All routes require auth
 
 #### POST `/orders`
 
 Create a new order from the user's cart.
 
-> **Pre-requisite**: The customer must have at least one saved address. If no address exists, the API returns `400`. Add an address via `POST /api/addresses` first.
+> **Pre-requisite**: The customer must have at least one saved address. If no address exists, the API returns `400`. Add an address via `POST /api/v1/addresses` first.
 
 | Field           | Type   | Required | Rules                                          |
 | --------------- | ------ | :------: | ---------------------------------------------- |
@@ -1064,6 +1094,15 @@ Create a new order from the user's cart.
           "name": "Jollof Rice",
           "quantity": 2,
           "unitPrice": 45.0,
+          "extraItems": [
+            {
+              "extraItem": "...",
+              "name": "Extra Salad",
+              "quantity": 1,
+              "unitPrice": 5,
+              "lineTotal": 5
+            }
+          ],
           "lineTotal": 90.0
         }
       ],
@@ -1360,7 +1399,7 @@ Get all paid orders with live coordinates for dispatch management and map tracki
 
 ### 8. Payments
 
-Base path: `/api/payments`
+Base path: `/api/v1/payments`
 
 #### POST `/payments/paystack/initialize` 🔒 Auth
 
@@ -1513,7 +1552,7 @@ Refund a payment. For Paystack payments, the refund is initiated via the Paystac
 
 ### 9. Testimonials
 
-Base path: `/api/testimonials`
+Base path: `/api/v1/testimonials`
 
 #### GET `/testimonials/approved`
 
@@ -1618,7 +1657,7 @@ Approve/feature a testimonial.
 
 ### 10. Likes
 
-Base path: `/api/likes` — 🔒 All routes require auth
+Base path: `/api/v1/likes` — 🔒 All routes require auth
 
 #### GET `/likes`
 
@@ -1678,7 +1717,7 @@ Check if the current user has liked a specific menu item.
 
 ### 11. Newsletter
 
-Base path: `/api/newsletter`
+Base path: `/api/v1/newsletter`
 
 #### POST `/newsletter/subscribe`
 
@@ -1741,7 +1780,7 @@ Get subscriber count.
 
 ### 12. Admin
 
-Base path: `/api/admin` — 🔒 All routes require auth
+Base path: `/api/v1/admin` — 🔒 All routes require auth
 
 #### GET `/admin/profile`
 
@@ -2026,7 +2065,7 @@ Examples:
 
 ### 13. Analytics
 
-Base path: `/api/analytics` — 🔐 All routes require `report:read` permission
+Base path: `/api/v1/analytics` — 🔐 All routes require `report:read` permission
 
 #### GET `/analytics/dashboard`
 
@@ -2141,7 +2180,7 @@ Reservation analytics.
 
 ### 14. Reservations
 
-Base path: `/api/reservations`
+Base path: `/api/v1/reservations`
 
 #### POST `/reservations`
 
@@ -2275,6 +2314,89 @@ pending → confirmed → seated → completed
 ---
 
 #### DELETE `/reservations/:id` 🔐 `reservation:delete`
+
+**Response** `204`
+
+---
+
+### 15. Extra Items & Extra Item Categories
+
+These endpoints support menu add-ons. Customers can read/select them, but only super admin, admin, and staff can create/update/delete.
+
+#### Extra Item Categories
+
+Base path: `/api/v1/extra-items-categories`
+
+#### GET `/extra-items-categories`
+
+Public list of extra item categories.
+
+**Response** `200` — `{ status, results, data: { categories: [...] } }`
+
+#### GET `/extra-items-categories/:id`
+
+Public category details with virtual `items` populated.
+
+**Response** `200`
+
+#### POST `/extra-items-categories` 🔒 Role: `super_admin` \| `admin` \| `staff`
+
+| Field  | Type   | Required | Rules       |
+| ------ | ------ | :------: | ----------- |
+| `name` | string |    ✅    | 2-100 chars |
+
+**Response** `201`
+
+#### PATCH `/extra-items-categories/:id` 🔒 Role: `super_admin` \| `admin` \| `staff`
+
+| Field  | Type   | Required |
+| ------ | ------ | :------: |
+| `name` | string |    —     |
+
+**Response** `200`
+
+#### DELETE `/extra-items-categories/:id` 🔒 Role: `super_admin` \| `admin` \| `staff`
+
+**Response** `204`
+
+#### Extra Items
+
+Base path: `/api/v1/extra-items`
+
+#### GET `/extra-items`
+
+Public list of extra items.
+
+| Query      | Type   | Required | Description                      |
+| ---------- | ------ | :------: | -------------------------------- |
+| `category` | string |    —     | Filter by extra item category ID |
+
+**Response** `200` — `{ status, results, data: { items: [...] } }`
+
+#### GET `/extra-items/:id`
+
+Public extra item details.
+
+**Response** `200`
+
+#### POST `/extra-items` 🔒 Role: `super_admin` \| `admin` \| `staff`
+
+| Field         | Type   | Required | Rules                        |
+| ------------- | ------ | :------: | ---------------------------- |
+| `name`        | string |    ✅    | 2-120 chars                  |
+| `price`       | number |    ✅    | >= 0                         |
+| `description` | string |    —     | <= 300 chars                 |
+| `category`    | string |    ✅    | Extra item category ObjectId |
+
+**Response** `201`
+
+#### PATCH `/extra-items/:id` 🔒 Role: `super_admin` \| `admin` \| `staff`
+
+All fields optional.
+
+**Response** `200`
+
+#### DELETE `/extra-items/:id` 🔒 Role: `super_admin` \| `admin` \| `staff`
 
 **Response** `204`
 
@@ -2595,9 +2717,20 @@ pending → confirmed → seated → completed
 |        |                                  |      |                        |
 |  GET   | `/cart`                          |  🔒  | —                      |
 |  POST  | `/cart/items`                    |  🔒  | —                      |
-| PATCH  | `/cart/items/:menuItemId`        |  🔒  | —                      |
-| DELETE | `/cart/items/:menuItemId`        |  🔒  | —                      |
+| PATCH  | `/cart/items/:itemId`            |  🔒  | —                      |
+| DELETE | `/cart/items/:itemId`            |  🔒  | —                      |
 | DELETE | `/cart`                          |  🔒  | —                      |
+|        |                                  |      |                        |
+|  GET   | `/extra-items-categories`        |  —   | —                      |
+|  GET   | `/extra-items-categories/:id`    |  —   | —                      |
+|  POST  | `/extra-items-categories`        |  🔒  | Role: admin/staff      |
+| PATCH  | `/extra-items-categories/:id`    |  🔒  | Role: admin/staff      |
+| DELETE | `/extra-items-categories/:id`    |  🔒  | Role: admin/staff      |
+|  GET   | `/extra-items`                   |  —   | —                      |
+|  GET   | `/extra-items/:id`               |  —   | —                      |
+|  POST  | `/extra-items`                   |  🔒  | Role: admin/staff      |
+| PATCH  | `/extra-items/:id`               |  🔒  | Role: admin/staff      |
+| DELETE | `/extra-items/:id`               |  🔒  | Role: admin/staff      |
 |        |                                  |      |                        |
 |  POST  | `/orders`                        |  🔒  | —                      |
 |  GET   | `/orders/my`                     |  🔒  | —                      |
