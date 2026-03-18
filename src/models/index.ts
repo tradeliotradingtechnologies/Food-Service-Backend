@@ -17,3 +17,5 @@ export { default as RefreshToken } from "./refreshTokenModel.js";
 export { default as AuditLog } from "./auditLogModel.js";
 export { default as Reservation } from "./reservationModel.js";
 export { default as AppSettings } from "./appSettingsModel.js";
+export { default as ExtraItem } from "./extraItems.js";
+export { default as ExtraItemsCategory } from "./extraItemsCategory.js";
