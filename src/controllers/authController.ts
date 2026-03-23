@@ -33,6 +33,8 @@ const signRefreshTokenJWT = (userId: string, family: string): string => {
 const hashToken = (token: string): string =>
   crypto.createHash("sha256").update(token).digest("hex");
 
+const REFRESH_COOKIE_PATH = "/api/v1/auth/refresh";
+
 const createSendTokens = async (
   user: any,
   res: Response,
@@ -58,7 +60,7 @@ const createSendTokens = async (
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict" as const,
+    sameSite: "none" as const,
   };
 
   res.cookie("accessToken", accessToken, {
@@ -69,7 +71,7 @@ const createSendTokens = async (
   res.cookie("refreshToken", rawRefreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/api/auth/refresh", // Only sent to refresh endpoint
+    path: REFRESH_COOKIE_PATH, // Only sent to refresh endpoint
   });
 };
 
@@ -289,7 +291,7 @@ export const refreshAccessToken = catchAsync(
     res.cookie("refreshToken", newRawRefresh, {
       ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/api/auth/refresh",
+      path: REFRESH_COOKIE_PATH,
     });
 
     res.status(200).json({
@@ -312,7 +314,7 @@ export const logout = catchAsync(async (req: Request, res: Response) => {
   }
 
   res.clearCookie("accessToken");
-  res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
+  res.clearCookie("refreshToken", { path: REFRESH_COOKIE_PATH });
 
   res.status(200).json({
     status: "success",

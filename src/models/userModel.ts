@@ -44,7 +44,7 @@ const userSchema = new Schema<IUser>(
       required: true,
     },
     avatar: { type: String },
-    phoneNumber: { type: String },
+    phoneNumber: { type: String, trim: true, required: true },
     addresses: [{ type: Schema.Types.ObjectId, ref: "Address" }],
     defaultAddress: { type: Schema.Types.ObjectId, ref: "Address" },
     active: { type: Boolean, default: true },

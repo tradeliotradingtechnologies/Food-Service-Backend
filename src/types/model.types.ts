@@ -224,6 +224,8 @@ export interface IMenuItem extends Document, ISoftDeletable {
   nutritionalInfo?: INutritionalInfo;
   isAvailable: boolean;
   isFeatured: boolean;
+  isFoodOftheDay: boolean;
+  day?: string;
   likes: number;
   averageRating: number;
   totalReviews: number;

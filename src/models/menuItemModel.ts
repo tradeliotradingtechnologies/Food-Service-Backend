@@ -37,6 +37,8 @@ const menuItemSchema = new Schema<IMenuItem>(
     nutritionalInfo: { type: nutritionalInfoSchema },
     isAvailable: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
+    isFoodOftheDay: { type: Boolean, default: false },
+    day: { type: String, trim: true },
     likes: { type: Number, default: 0, min: 0 },
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
     totalReviews: { type: Number, default: 0, min: 0 },
@@ -51,6 +53,7 @@ const menuItemSchema = new Schema<IMenuItem>(
 // ── Indexes ──────────────────────────────────────────────
 menuItemSchema.index({ category: 1, isAvailable: 1 });
 menuItemSchema.index({ isFeatured: 1, isAvailable: 1 });
+menuItemSchema.index({ isFoodOftheDay: 1, day: 1, isAvailable: 1 });
 menuItemSchema.index({ price: 1 });
 menuItemSchema.index({ name: "text", description: "text" });
 
