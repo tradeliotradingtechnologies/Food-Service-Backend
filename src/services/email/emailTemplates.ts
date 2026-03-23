@@ -160,7 +160,8 @@ export const orderConfirmation = (data: {
   deliveryFee: number;
   tax: number;
   totalAmount: number;
-  deliveryAddress: string;
+  orderType: string;
+  deliveryAddress?: string;
   paymentMethod: string;
 }): { subject: string; html: string } => {
   const itemsHtml = data.items
@@ -209,7 +210,8 @@ export const orderConfirmation = (data: {
         </table>
       </div>
 
-      <p><strong>Delivery to:</strong> ${data.deliveryAddress}</p>
+      <p><strong>Order Type:</strong> ${data.orderType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+      ${data.orderType === "delivery" && data.deliveryAddress ? `<p><strong>Delivery to:</strong> ${data.deliveryAddress}</p>` : ""}
       <p><strong>Payment:</strong> ${data.paymentMethod.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
       
       <p style="text-align:center; margin:28px 0;">

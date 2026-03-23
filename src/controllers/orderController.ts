@@ -25,7 +25,8 @@ export const createOrder = catchAsync(async (req: Request, res: Response) => {
       deliveryFee: order.deliveryFee,
       tax: order.tax,
       totalAmount: order.totalAmount,
-      deliveryAddress: order.deliveryAddress.location,
+      orderType: order.orderType,
+      deliveryAddress: order.deliveryAddress?.location,
       paymentMethod: order.paymentMethod,
     });
   }

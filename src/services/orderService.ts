@@ -10,7 +10,11 @@ import {
   buildDeliveryCoordinates,
 } from "./geolocationService.js";
 import AppError from "../utils/appError.js";
-import type { PaymentMethod, OrderStatus } from "../types/model.types.js";
+import type {
+  OrderType,
+  PaymentMethod,
+  OrderStatus,
+} from "../types/model.types.js";
 
 const UNPAID_PAYMENT_STATUSES = ["pending", "initiated", "failed"] as const;
 
@@ -130,6 +134,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 export const createOrder = async (
   userId: string,
   data: {
+    orderType?: OrderType;
     addressId?: string;
     paymentMethod: PaymentMethod;
     notes?: string;
@@ -151,10 +156,17 @@ export const createOrder = async (
     );
   }
 
-  const { user, address } = await resolveUserAddress(userId, data.addressId);
+  const orderType = data.orderType ?? "delivery";
 
-  // Auto-build delivery details for the delivery person
-  const deliveryAddress = buildDeliveryAddressSnapshot(user, address);
+  const user = await User.findById(userId).select("name");
+  if (!user) throw new AppError("User not found", 404);
+
+  let deliveryAddress;
+  if (orderType === "delivery") {
+    const { address } = await resolveUserAddress(userId, data.addressId);
+    // Auto-build delivery details for the delivery person
+    deliveryAddress = buildDeliveryAddressSnapshot(user, address);
+  }
 
   // Get user's cart
   const cart = await Cart.findOne({ user: userId }).populate("items.menuItem");
@@ -204,10 +216,12 @@ export const createOrder = async (
   }
 
   const deliveryFee =
-    orderSettings.freeDeliveryThreshold !== null &&
-    subtotal >= orderSettings.freeDeliveryThreshold
+    orderType !== "delivery"
       ? 0
-      : orderSettings.deliveryFee;
+      : orderSettings.freeDeliveryThreshold !== null &&
+          subtotal >= orderSettings.freeDeliveryThreshold
+        ? 0
+        : orderSettings.deliveryFee;
 
   const processingFee =
     orderSettings.processingFee.type === "percentage"
@@ -221,6 +235,7 @@ export const createOrder = async (
   const order = await Order.create({
     user: userId,
     items: orderItems,
+    orderType,
     deliveryAddress,
     deliveryFee,
     subtotal,
@@ -398,6 +413,13 @@ export const refreshOrderDeliveryAddress = async (
 ) => {
   const order = await Order.findById(orderId);
   if (!order) throw new AppError("Order not found", 404);
+
+  if (order.orderType !== "delivery") {
+    throw new AppError(
+      "Only delivery orders can have their delivery address refreshed.",
+      400,
+    );
+  }
 
   if (order.status !== "pending") {
     throw new AppError(

@@ -142,7 +142,8 @@ export const sendOrderConfirmationEmail = async (
     deliveryFee: number;
     tax: number;
     totalAmount: number;
-    deliveryAddress: string;
+    orderType: string;
+    deliveryAddress?: string;
     paymentMethod: string;
   },
 ): Promise<string | null> => {

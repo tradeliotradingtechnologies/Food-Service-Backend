@@ -1,14 +1,29 @@
 import { z } from "zod";
-import { ORDER_STATUSES, PAYMENT_METHODS } from "../types/model.types.js";
+import {
+  ORDER_STATUSES,
+  ORDER_TYPES,
+  PAYMENT_METHODS,
+} from "../types/model.types.js";
 
 export const createOrderSchema = z.object({
-  body: z.object({
-    addressId: z.string().optional(),
-    paymentMethod: z.enum(PAYMENT_METHODS, {
-      message: "Invalid payment method",
+  body: z
+    .object({
+      orderType: z.enum(ORDER_TYPES).default("delivery"),
+      addressId: z.string().optional(),
+      paymentMethod: z.enum(PAYMENT_METHODS, {
+        message: "Invalid payment method",
+      }),
+      notes: z.string().max(500).optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.orderType === "delivery" && !data.addressId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["addressId"],
+          message: "Address is required for delivery orders",
+        });
+      }
     }),
-    notes: z.string().max(500).optional(),
-  }),
 });
 
 export const updateOrderStatusSchema = z.object({

@@ -72,6 +72,9 @@ export const PAYMENT_STATUSES = [
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+export const ORDER_TYPES = ["delivery", "dine_in", "takeaway"] as const;
+export type OrderType = (typeof ORDER_TYPES)[number];
+
 // ──────────────────────────────── Soft Delete ────────────────────────────────
 
 export interface ISoftDeletable {
@@ -319,7 +322,8 @@ export interface IOrder extends Document {
   orderNumber: string;
   user: Ref<IUser>;
   items: IOrderItem[];
-  deliveryAddress: IDeliveryAddress;
+  orderType: OrderType;
+  deliveryAddress?: IDeliveryAddress;
   deliveryFee: number;
   subtotal: number;
   processingFee: number;

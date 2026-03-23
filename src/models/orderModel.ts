@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 import type { IOrder } from "../types/model.types.js";
 import {
+  ORDER_TYPES,
   ORDER_STATUSES,
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
@@ -81,7 +82,18 @@ const orderSchema = new Schema<IOrder>(
         message: "Order must contain at least one item",
       },
     },
-    deliveryAddress: { type: deliveryAddressSchema, required: true },
+    orderType: {
+      type: String,
+      required: true,
+      enum: ORDER_TYPES,
+      default: "delivery",
+    },
+    deliveryAddress: {
+      type: deliveryAddressSchema,
+      required: function (this: IOrder) {
+        return this.orderType === "delivery";
+      },
+    },
     deliveryFee: { type: Number, default: 0, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },
     processingFee: { type: Number, default: 0, min: 0 },
