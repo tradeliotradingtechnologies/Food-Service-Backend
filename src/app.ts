@@ -73,9 +73,9 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/signup", authLimiter);
-app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/v1/auth/login", authLimiter);
+app.use("/api/v1/auth/signup", authLimiter);
+app.use("/api/v1/auth/forgot-password", authLimiter);
 
 // ── Logging ─────────────────────────────────────────────────────
 if (isProduction) {
@@ -100,6 +100,14 @@ app.use(
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-API-Key",
+      "X-Requested-With",
+    ],
+    optionsSuccessStatus: 204,
   }),
 );
 

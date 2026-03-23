@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import * as templates from "./emailTemplates.js";
 
 const getPrimaryClientUrl = (): string =>
@@ -15,38 +16,20 @@ let transporter: nodemailer.Transporter;
 
 const createTransporter = async (): Promise<nodemailer.Transporter> => {
   if (transporter) return transporter;
-
-  if (process.env.NODE_ENV === "production") {
-    // Production SMTP
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === "true", // true for 465
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  } else {
-    // Development: Ethereal test account
-    // Emails are captured at https://ethereal.email
-    const testAccount = await nodemailer.createTestAccount();
-
-    transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-
-    console.log(
-      `📧 Ethereal email account: ${testAccount.user} (check https://ethereal.email)`,
-    );
-  }
-
+  // Only used in dev/test
+  const testAccount = await nodemailer.createTestAccount();
+  transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+  console.log(
+    `📧 Ethereal email account: ${testAccount.user} (check https://ethereal.email)`,
+  );
   return transporter;
 };
 
@@ -61,29 +44,38 @@ interface SendMailOptions {
 
 const sendMail = async (options: SendMailOptions): Promise<string | null> => {
   try {
-    const transport = await createTransporter();
-
     const from =
       process.env.EMAIL_FROM ||
       '"Erica\'s Kitchen" <noreply@ericaskitchen.com>';
 
-    const info = await transport.sendMail({
-      from,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      replyTo: options.replyTo || process.env.EMAIL_REPLY_TO,
-    });
-
-    // In dev, log the preview URL
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV === "production" && process.env.SENDGRID_API_KEY) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      const msg = {
+        to: options.to,
+        from,
+        subject: options.subject,
+        html: options.html,
+        replyTo: options.replyTo || process.env.EMAIL_REPLY_TO,
+      };
+      await sgMail.send(msg);
+      return "sendgrid";
+    } else {
+      // Dev/test: use nodemailer/Ethereal
+      const transport = await createTransporter();
+      const info = await transport.sendMail({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        replyTo: options.replyTo || process.env.EMAIL_REPLY_TO,
+      });
+      // In dev, log the preview URL
       const previewUrl = nodemailer.getTestMessageUrl(info);
       if (previewUrl) {
         console.log(`📧 Preview: ${previewUrl}`);
       }
+      return info.messageId;
     }
-
-    return info.messageId;
   } catch (error) {
     console.error("❌ Email send failed:", error);
     // Don't throw — emails failing should not break the main flow

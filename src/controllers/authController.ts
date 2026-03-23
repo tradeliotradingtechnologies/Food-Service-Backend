@@ -42,6 +42,10 @@ const authCookieOptions = {
   // In local dev, use Lax so cookies are still accepted on http://localhost.
   secure: isProduction,
   sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  // CHIPS: allow third-party cookies when users block non-partitioned cookies.
+  // Safe no-op on browsers that don't support Partitioned yet.
+  partitioned: isProduction,
+  path: "/",
 };
 
 const createSendTokens = async (
