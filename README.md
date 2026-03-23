@@ -1066,15 +1066,18 @@ Base path: `/api/v1/orders` — 🔒 All routes require auth
 
 Create a new order from the user's cart.
 
-> **Pre-requisite**: The customer must have at least one saved address. If no address exists, the API returns `400`. Add an address via `POST /api/v1/addresses` first.
+> **Address rule**: A saved address is required only when `orderType` is `delivery`.
 
-| Field           | Type   | Required | Rules                                          |
-| --------------- | ------ | :------: | ---------------------------------------------- |
-| `addressId`     | string |    —     | ID of a saved address. Omit to use the default |
-| `paymentMethod` | string |    ✅    | `mobile_money` \| `card` \| `cash_on_delivery` |
-| `notes`         | string |    —     | Max 500                                        |
+| Field           | Type   | Required | Rules                                                          |
+| --------------- | ------ | :------: | -------------------------------------------------------------- |
+| `orderType`     | string |    —     | `delivery` \| `dine_in` \| `takeaway` (defaults to `delivery`) |
+| `addressId`     | string |  _see_   | Required when `orderType = delivery`; optional otherwise       |
+| `paymentMethod` | string |    ✅    | `mobile_money` \| `card` \| `cash_on_delivery`                 |
+| `notes`         | string |    —     | Max 500                                                        |
 
-**Delivery details are auto-generated** from the saved address — you no longer supply `location`, `phoneNumber`, etc. in the request body.
+For `delivery`, **delivery details are auto-generated** from the saved address. You do not supply `location`, `phoneNumber`, etc. in the request body.
+
+For `dine_in` and `takeaway`, the order can be created without any saved address and `deliveryFee` is `0`.
 
 > If the customer later updates that saved address, the new details automatically sync to the customer's own `pending` unpaid orders. Confirmed, paid, delivered, or cancelled orders keep their existing snapshot.
 
@@ -1088,6 +1091,7 @@ Create a new order from the user's cart.
       "_id": "...",
       "orderNumber": "EK-20260303-0005",
       "user": "...",
+      "orderType": "delivery",
       "items": [
         {
           "menuItem": "...",
@@ -1218,7 +1222,7 @@ Refresh a pending unpaid order's delivery snapshot from the customer's saved add
 
 **Response** `200`
 
-> This endpoint is intended for staff/admin use before confirmation. It only works for `pending` unpaid orders.
+> This endpoint is intended for staff/admin use before confirmation. It only works for `delivery` orders that are still `pending` and unpaid.
 
 ---
 
@@ -2428,6 +2432,12 @@ All fields optional.
 "mobile_money" | "card" | "cash_on_delivery";
 ```
 
+### Order Types
+
+```typescript
+"delivery" | "dine_in" | "takeaway";
+```
+
 ### Payment Statuses
 
 ```typescript
@@ -2523,6 +2533,7 @@ All fields optional.
   _id: string;
   orderNumber: string;           // "EK-YYYYMMDD-XXXX"
   user: string;
+  orderType: "delivery" | "dine_in" | "takeaway";
   items: {
     menuItem: string;
     name: string;                // snapshot
@@ -2530,7 +2541,7 @@ All fields optional.
     unitPrice: number;
     lineTotal: number;
   }[];
-  deliveryAddress: {
+  deliveryAddress?: {
     sourceAddressId?: string;    // link to saved address used for snapshot sync
     customerName: string;        // auto-populated from user profile
     addressLabel?: string;       // e.g. "Home", "Office"

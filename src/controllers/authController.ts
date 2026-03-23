@@ -34,6 +34,15 @@ const hashToken = (token: string): string =>
   crypto.createHash("sha256").update(token).digest("hex");
 
 const REFRESH_COOKIE_PATH = "/api/v1/auth/refresh";
+const isProduction = process.env.NODE_ENV === "production";
+
+const authCookieOptions = {
+  httpOnly: true,
+  // Cross-site cookies in production require SameSite=None + Secure.
+  // In local dev, use Lax so cookies are still accepted on http://localhost.
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+};
 
 const createSendTokens = async (
   user: any,
@@ -56,20 +65,13 @@ const createSendTokens = async (
     ipAddress: req.ip,
   });
 
-  // Set HTTP-only cookies
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "none" as const,
-  };
-
   res.cookie("accessToken", accessToken, {
-    ...cookieOptions,
+    ...authCookieOptions,
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
 
   res.cookie("refreshToken", rawRefreshToken, {
-    ...cookieOptions,
+    ...authCookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: REFRESH_COOKIE_PATH, // Only sent to refresh endpoint
   });
@@ -277,19 +279,13 @@ export const refreshAccessToken = catchAsync(
       ipAddress: req.ip,
     });
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict" as const,
-    };
-
     res.cookie("accessToken", newAccessToken, {
-      ...cookieOptions,
+      ...authCookieOptions,
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", newRawRefresh, {
-      ...cookieOptions,
+      ...authCookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: REFRESH_COOKIE_PATH,
     });
@@ -313,8 +309,11 @@ export const logout = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken", { path: REFRESH_COOKIE_PATH });
+  res.clearCookie("accessToken", authCookieOptions);
+  res.clearCookie("refreshToken", {
+    ...authCookieOptions,
+    path: REFRESH_COOKIE_PATH,
+  });
 
   res.status(200).json({
     status: "success",
