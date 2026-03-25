@@ -92,19 +92,33 @@ const sendMail = async (options: SendMailOptions): Promise<string | null> => {
     }
   } catch (error: any) {
     const sendGridErrors = error?.response?.body?.errors;
+
     if (Array.isArray(sendGridErrors) && sendGridErrors.length > 0) {
       console.error("❌ SendGrid email rejected", {
-        code: error?.code,
         statusCode: error?.response?.statusCode,
-        from: process.env.EMAIL_FROM,
+        code: error?.code,
         details: sendGridErrors.map((e: any) => ({
           message: e?.message,
           field: e?.field,
           help: e?.help,
         })),
       });
+    } else if (
+      error?.code === "ENOTFOUND" &&
+      String(error?.message || "").includes("api.sendgrid.com")
+    ) {
+      console.error("❌ SendGrid DNS resolution failed", {
+        code: error?.code,
+        hostname: "api.sendgrid.com",
+        message:
+          "Server could not resolve SendGrid host. Check DNS resolver and outbound network access.",
+      });
     } else {
-      console.error("❌ Email send failed:", error);
+      console.error("❌ Email send failed", {
+        code: error?.code,
+        statusCode: error?.response?.statusCode,
+        message: error?.message,
+      });
     }
     // Don't throw — emails failing should not break the main flow
     return null;
