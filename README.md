@@ -2890,4 +2890,67 @@ Create a `.env` file in the project root. All required variables must be set for
 
 ---
 
+---
+
+## Promo Code Endpoints
+
+**Base path:** `/api/v1/admin/settings/promo-codes` (super_admin only)
+
+| Method | Path                                   | Description             |
+| ------ | -------------------------------------- | ----------------------- |
+| POST   | `/settings/promo-codes`                | Create a new promo code |
+| GET    | `/settings/promo-codes`                | List/search promo codes |
+| GET    | `/settings/promo-codes/:id`            | Get promo code by ID    |
+| PATCH  | `/settings/promo-codes/:id`            | Update promo code       |
+| PATCH  | `/settings/promo-codes/:id/invalidate` | Invalidate a promo code |
+| DELETE | `/settings/promo-codes/:id`            | Delete a promo code     |
+
+**Promo Code Object Example:**
+
+```json
+{
+  "_id": "...",
+  "code": "WELCOME10",
+  "discountType": "percent", // or "fixed"
+  "discountValue": 10,
+  "maxRedemptions": 100,
+  "expiresAt": "2026-12-31T23:59:59.000Z",
+  "isActive": true,
+  "createdAt": "2026-03-25T10:00:00.000Z"
+}
+```
+
+---
+
+## Commission Endpoints
+
+**Base path:** `/api/v1/admin/settings/commission` (super_admin only)
+
+| Method | Path                         | Description                    |
+| ------ | ---------------------------- | ------------------------------ |
+| GET    | `/settings/commission`       | Get commission settings        |
+| PATCH  | `/settings/commission`       | Update commission settings     |
+| GET    | `/settings/commission/today` | Get today's commission summary |
+
+**Commission Settings Example:**
+
+```json
+{
+  "type": "percent", // or "fixed"
+  "value": 5 // percent or fixed amount
+}
+```
+
+**Today's Commission Example:**
+
+```json
+{
+  "date": "2026-03-25",
+  "totalCommission": 120.5,
+  "ordersCount": 15
+}
+```
+
+---
+
 _Erica's Kitchen API v1.0.0 — Last updated March 2026_
