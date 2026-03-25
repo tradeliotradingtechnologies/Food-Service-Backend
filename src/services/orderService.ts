@@ -3,6 +3,7 @@ import Cart from "../models/cartModel.js";
 import MenuItem from "../models/menuItemModel.js";
 import Address from "../models/addressModel.js";
 import User from "../models/userModel.js";
+import PromoCode from "../models/promoCodeModel.js";
 import { getOrderSettings, getPaymentSettings } from "./appSettingsService.js";
 import {
   reverseGeocodeCoordinates,
@@ -137,6 +138,7 @@ export const createOrder = async (
     orderType?: OrderType;
     addressId?: string;
     paymentMethod: PaymentMethod;
+    promoCode?: string;
     notes?: string;
   },
 ) => {
@@ -223,10 +225,35 @@ export const createOrder = async (
         ? 0
         : orderSettings.deliveryFee;
 
-  const processingFee =
+  const baseProcessingFee =
     orderSettings.processingFee.type === "percentage"
       ? +((subtotal * orderSettings.processingFee.amount) / 100).toFixed(2)
       : orderSettings.processingFee.amount;
+
+  let processingFee = baseProcessingFee;
+  let processingFeeWaived = false;
+  let appliedPromoCode: string | undefined;
+
+  if (data.promoCode) {
+    const normalizedPromoCode = data.promoCode.trim().toUpperCase();
+    const promoCode = await PromoCode.findOne({ code: normalizedPromoCode });
+
+    if (!promoCode) {
+      throw new AppError("Promo code is invalid.", 400);
+    }
+
+    if (!promoCode.isActive || promoCode.invalidatedAt) {
+      throw new AppError("Promo code is inactive.", 400);
+    }
+
+    if (promoCode.expiresAt.getTime() <= Date.now()) {
+      throw new AppError("Promo code has expired.", 400);
+    }
+
+    processingFee = 0;
+    processingFeeWaived = true;
+    appliedPromoCode = promoCode.code;
+  }
 
   const tax = +((subtotal * orderSettings.taxRate) / 100).toFixed(2);
 
@@ -240,6 +267,8 @@ export const createOrder = async (
     deliveryFee,
     subtotal,
     processingFee,
+    processingFeeWaived,
+    appliedPromoCode,
     tax,
     totalAmount,
     paymentMethod: data.paymentMethod,

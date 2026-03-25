@@ -4,9 +4,14 @@ import { authenticate, authorize, requireRole } from "../middleware/auth.js";
 import validate from "../middleware/validate.js";
 import {
   adminUpdateUserSchema,
+  createPromoCodeSchema,
+  promoCodeIdSchema,
+  promoCodeQuerySchema,
   settingsKeySchema,
+  updateCommissionSettingsSchema,
   updateOrderSettingsSchema,
   updatePaymentSettingsSchema,
+  updatePromoCodeSchema,
   userQuerySchema,
   updateReservationSettingsSchema,
   updateProcessingFeeSchema,
@@ -107,6 +112,59 @@ router.patch(
   requireRole("super_admin"),
   validate(updateProcessingFeeSchema),
   ctrl.updateProcessingFee,
+);
+router.get(
+  "/settings/commission",
+  requireRole("super_admin"),
+  ctrl.getCommissionSettings,
+);
+router.patch(
+  "/settings/commission",
+  requireRole("super_admin"),
+  validate(updateCommissionSettingsSchema),
+  ctrl.updateCommissionSettings,
+);
+router.get(
+  "/settings/commission/today",
+  requireRole("super_admin"),
+  ctrl.getTodayCommission,
+);
+
+router.post(
+  "/settings/promo-codes",
+  requireRole("super_admin"),
+  validate(createPromoCodeSchema),
+  ctrl.createPromoCode,
+);
+router.get(
+  "/settings/promo-codes",
+  requireRole("super_admin"),
+  validate(promoCodeQuerySchema),
+  ctrl.getPromoCodes,
+);
+router.get(
+  "/settings/promo-codes/:id",
+  requireRole("super_admin"),
+  validate(promoCodeIdSchema),
+  ctrl.getPromoCodeById,
+);
+router.patch(
+  "/settings/promo-codes/:id",
+  requireRole("super_admin"),
+  validate(updatePromoCodeSchema),
+  ctrl.updatePromoCode,
+);
+router.patch(
+  "/settings/promo-codes/:id/invalidate",
+  requireRole("super_admin"),
+  validate(promoCodeIdSchema),
+  ctrl.invalidatePromoCode,
+);
+router.delete(
+  "/settings/promo-codes/:id",
+  requireRole("super_admin"),
+  validate(promoCodeIdSchema),
+  ctrl.deletePromoCode,
 );
 
 export default router;

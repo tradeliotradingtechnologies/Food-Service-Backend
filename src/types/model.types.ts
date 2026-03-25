@@ -328,6 +328,8 @@ export interface IOrder extends Document {
   deliveryFee: number;
   subtotal: number;
   processingFee: number;
+  processingFeeWaived: boolean;
+  appliedPromoCode?: string;
   tax: number;
   totalAmount: number;
   status: OrderStatus;
@@ -379,10 +381,16 @@ export interface IPaymentSettings {
   refundWindowDays: number;
 }
 
+export interface ICommissionSettings {
+  enabled: boolean;
+  percentage: number;
+}
+
 export interface IAppSettingsMap {
   orders: IOrderSettings;
   reservations: IReservationSettings;
   payments: IPaymentSettings;
+  commission: ICommissionSettings;
 }
 
 export type AppSettingKey = keyof IAppSettingsMap;
@@ -393,9 +401,25 @@ export interface IAppSettings extends Document {
     | IOrderSettings
     | IReservationSettings
     | IPaymentSettings
+    | ICommissionSettings
     | IProcessingFee
     | unknown;
   description?: string;
+  updatedBy?: Ref<IUser>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ──────────────────────────────── Promo Code ────────────────────────────────
+
+export interface IPromoCode extends Document {
+  code: string;
+  description?: string;
+  expiresAt: Date;
+  isActive: boolean;
+  invalidatedAt?: Date;
+  invalidatedBy?: Ref<IUser>;
+  createdBy: Ref<IUser>;
   updatedBy?: Ref<IUser>;
   createdAt: Date;
   updatedAt: Date;

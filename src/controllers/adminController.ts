@@ -162,7 +162,9 @@ export const getAllSettings = catchAsync(
 
 export const getSettingsByKey = catchAsync(
   async (
-    req: Request<{ key: "orders" | "reservations" | "payments" }>,
+    req: Request<{
+      key: "orders" | "reservations" | "payments" | "commission";
+    }>,
     res: Response,
   ) => {
     const settings = await adminService.getSettingsByKey(req.params.key);
@@ -235,6 +237,121 @@ export const updateProcessingFee = catchAsync(
       status: "success",
       message: "Processing fee updated successfully",
       data: { processingFee },
+    });
+  },
+);
+
+export const getCommissionSettings = catchAsync(
+  async (_req: Request, res: Response) => {
+    const settings = await adminService.getCommissionSettingsForAdmin();
+    res.status(200).json({
+      status: "success",
+      data: { settings },
+    });
+  },
+);
+
+export const updateCommissionSettings = catchAsync(
+  async (req: Request, res: Response) => {
+    const settings = await adminService.updateCommissionSettingsForAdmin(
+      req.body,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Commission settings updated successfully",
+      data: { settings },
+    });
+  },
+);
+
+export const getTodayCommission = catchAsync(
+  async (_req: Request, res: Response) => {
+    const commission = await adminService.getTodayCommissionSummary();
+    res.status(200).json({
+      status: "success",
+      data: { commission },
+    });
+  },
+);
+
+export const createPromoCode = catchAsync(
+  async (req: Request, res: Response) => {
+    const promoCode = await adminService.createPromoCode(
+      req.body,
+      req.user._id,
+    );
+    res.status(201).json({
+      status: "success",
+      data: { promoCode },
+    });
+  },
+);
+
+export const getPromoCodes = catchAsync(async (req: Request, res: Response) => {
+  const result = await adminService.getPromoCodes({
+    isActive:
+      req.query.isActive !== undefined
+        ? req.query.isActive === "true"
+        : undefined,
+    includeExpired:
+      req.query.includeExpired !== undefined
+        ? req.query.includeExpired === "true"
+        : undefined,
+    page: Number(req.query.page) || 1,
+    limit: Number(req.query.limit) || 20,
+  });
+  res.status(200).json({
+    status: "success",
+    results: result.promoCodes.length,
+    data: result,
+  });
+});
+
+export const getPromoCodeById = catchAsync(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const promoCode = await adminService.getPromoCodeById(req.params.id);
+    res.status(200).json({
+      status: "success",
+      data: { promoCode },
+    });
+  },
+);
+
+export const updatePromoCode = catchAsync(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const promoCode = await adminService.updatePromoCode(
+      req.params.id,
+      req.body,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      data: { promoCode },
+    });
+  },
+);
+
+export const invalidatePromoCode = catchAsync(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const promoCode = await adminService.invalidatePromoCode(
+      req.params.id,
+      req.user._id,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Promo code invalidated",
+      data: { promoCode },
+    });
+  },
+);
+
+export const deletePromoCode = catchAsync(
+  async (req: Request<{ id: string }>, res: Response) => {
+    await adminService.deletePromoCode(req.params.id, req.user._id);
+    res.status(204).json({
+      status: "success",
+      data: null,
     });
   },
 );

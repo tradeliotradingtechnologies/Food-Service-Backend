@@ -3,6 +3,7 @@ import AppError from "../utils/appError.js";
 import type {
   AppSettingKey,
   IAppSettingsMap,
+  ICommissionSettings,
   IOrderSettings,
   IPaymentSettings,
   IProcessingFee,
@@ -33,12 +34,17 @@ export const DEFAULT_APP_SETTINGS: IAppSettingsMap = {
     allowManualConfirmation: true,
     refundWindowDays: 30,
   },
+  commission: {
+    enabled: true,
+    percentage: 0,
+  },
 };
 
 const SETTING_DESCRIPTIONS: Record<AppSettingKey, string> = {
   orders: "Order and checkout operational settings",
   reservations: "Reservation availability and booking rules",
   payments: "Payment provider and refund behavior settings",
+  commission: "Commission settings for daily order totals",
 };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -103,13 +109,14 @@ export const getSettingSection = async <K extends AppSettingKey>(
 };
 
 export const getAllSettingSections = async (): Promise<IAppSettingsMap> => {
-  const [orders, reservations, payments] = await Promise.all([
+  const [orders, reservations, payments, commission] = await Promise.all([
     getSettingSection("orders"),
     getSettingSection("reservations"),
     getSettingSection("payments"),
+    getSettingSection("commission"),
   ]);
 
-  return { orders, reservations, payments };
+  return { orders, reservations, payments, commission };
 };
 
 export const updateSettingSection = async <K extends AppSettingKey>(
@@ -159,3 +166,15 @@ export const updateSettingSection = async <K extends AppSettingKey>(
 export const getOrderSettings = () => getSettingSection("orders");
 export const getReservationSettings = () => getSettingSection("reservations");
 export const getPaymentSettings = () => getSettingSection("payments");
+export const getCommissionSettings = () => getSettingSection("commission");
+
+export const updateCommissionSettings = async (
+  incoming: Partial<ICommissionSettings>,
+  updatedBy: string,
+) => {
+  const merged = await updateSettingSection("commission", incoming, updatedBy);
+  if (merged.percentage < 0 || merged.percentage > 100) {
+    throw new AppError("Commission percentage must be between 0 and 100", 400);
+  }
+  return merged;
+};

@@ -43,8 +43,59 @@ export const updateProcessingFeeSchema = z.object({
 
 export const settingsKeySchema = z.object({
   params: z.object({
-    key: z.enum(["orders", "reservations", "payments"]),
+    key: z.enum(["orders", "reservations", "payments", "commission"]),
   }),
+});
+
+const promoCodeShape = z.object({
+  code: z
+    .string()
+    .min(3, "Promo code must be at least 3 characters")
+    .max(32, "Promo code cannot exceed 32 characters")
+    .regex(
+      /^[A-Za-z0-9_-]+$/,
+      "Promo code can only include letters, numbers, _ and -",
+    ),
+  description: z.string().max(300).optional(),
+  expiresAt: z.coerce.date(),
+  isActive: z.boolean().optional(),
+});
+
+export const createPromoCodeSchema = z.object({
+  body: promoCodeShape,
+});
+
+export const updatePromoCodeSchema = z.object({
+  params: z.object({ id: z.string().min(1) }),
+  body: promoCodeShape
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one promo code field must be provided",
+    }),
+});
+
+export const promoCodeIdSchema = z.object({
+  params: z.object({ id: z.string().min(1) }),
+});
+
+export const promoCodeQuerySchema = z.object({
+  query: z.object({
+    isActive: z.coerce.boolean().optional(),
+    includeExpired: z.coerce.boolean().optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  }),
+});
+
+export const updateCommissionSettingsSchema = z.object({
+  body: z
+    .object({
+      enabled: z.boolean().optional(),
+      percentage: z.number().min(0).max(100).optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: "At least one commission setting must be provided",
+    }),
 });
 
 export const updateOrderSettingsSchema = z.object({

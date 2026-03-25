@@ -3,8 +3,11 @@ import Role from "../models/roleModel.js";
 import Permission from "../models/permissionModel.js";
 import OAuthAccount from "../models/oauthAccountModel.js";
 import AuditLog from "../models/auditLogModel.js";
+import PromoCode from "../models/promoCodeModel.js";
+import Order from "../models/orderModel.js";
 import {
   getAllSettingSections,
+  getCommissionSettings,
   getOrderSettings,
   getSettingSection,
   updateSettingSection,
@@ -12,8 +15,10 @@ import {
 import AppError from "../utils/appError.js";
 import type {
   AppSettingKey,
+  ICommissionSettings,
   IOrderSettings,
   IPaymentSettings,
+  IPromoCode,
   IProcessingFee,
   IReservationSettings,
 } from "../types/model.types.js";
@@ -272,6 +277,234 @@ export const updateProcessingFee = async (
   );
 
   return settings.processingFee;
+};
+
+export const getCommissionSettingsForAdmin = async () => {
+  return getCommissionSettings();
+};
+
+export const updateCommissionSettingsForAdmin = async (
+  data: Partial<ICommissionSettings>,
+  adminId: string,
+) => {
+  const nextPercentage = data.percentage;
+  if (
+    typeof nextPercentage === "number" &&
+    (nextPercentage < 0 || nextPercentage > 100)
+  ) {
+    throw new AppError("Commission percentage must be between 0 and 100", 400);
+  }
+
+  const before = await getCommissionSettings();
+  const settings = await updateSettingSection("commission", data, adminId);
+  await auditSettingsUpdate(
+    "commission",
+    before,
+    settings,
+    adminId,
+    "settings.update_commission",
+  );
+  return settings;
+};
+
+export const getTodayCommissionSummary = async () => {
+  const settings = await getCommissionSettings();
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setDate(endOfDay.getDate() + 1);
+
+  const [aggregate] = await Order.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: startOfDay, $lt: endOfDay },
+        paymentStatus: "success",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: "$totalAmount" },
+        ordersCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const totalRevenue = Number(aggregate?.totalRevenue || 0);
+  const ordersCount = Number(aggregate?.ordersCount || 0);
+  const commissionAmount = settings.enabled
+    ? +((totalRevenue * settings.percentage) / 100).toFixed(2)
+    : 0;
+
+  return {
+    date: startOfDay.toISOString().slice(0, 10),
+    settings,
+    ordersCount,
+    totalRevenue,
+    commissionAmount,
+  };
+};
+
+const ensurePromoCodeNotExpired = (expiresAt: Date) => {
+  if (expiresAt.getTime() <= Date.now()) {
+    throw new AppError("Promo code has expired", 400);
+  }
+};
+
+const toAuditRecord = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return { value };
+};
+
+export const createPromoCode = async (
+  data: {
+    code: string;
+    description?: string;
+    expiresAt: Date;
+    isActive?: boolean;
+  },
+  adminId: string,
+) => {
+  ensurePromoCodeNotExpired(data.expiresAt);
+
+  const promoCode = await PromoCode.create({
+    ...data,
+    createdBy: adminId,
+    updatedBy: adminId,
+    code: data.code.trim().toUpperCase(),
+  });
+
+  await AuditLog.create({
+    actor: adminId,
+    action: "promo_code.create",
+    resource: "promo_code",
+    resourceId: promoCode._id,
+    changes: { after: toAuditRecord(promoCode.toObject()) },
+    status: "success",
+  });
+
+  return promoCode;
+};
+
+export const getPromoCodes = async (query: {
+  isActive?: boolean;
+  includeExpired?: boolean;
+  page: number;
+  limit: number;
+}) => {
+  const filter: Record<string, unknown> = {};
+  if (typeof query.isActive === "boolean") filter.isActive = query.isActive;
+  if (!query.includeExpired) filter.expiresAt = { $gt: new Date() };
+
+  const skip = (query.page - 1) * query.limit;
+  const [promoCodes, total] = await Promise.all([
+    PromoCode.find(filter)
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email")
+      .populate("invalidatedBy", "name email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(query.limit),
+    PromoCode.countDocuments(filter),
+  ]);
+
+  return {
+    promoCodes,
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      pages: Math.ceil(total / query.limit),
+    },
+  };
+};
+
+export const getPromoCodeById = async (id: string) => {
+  const promoCode = await PromoCode.findById(id)
+    .populate("createdBy", "name email")
+    .populate("updatedBy", "name email")
+    .populate("invalidatedBy", "name email");
+  if (!promoCode) throw new AppError("Promo code not found", 404);
+  return promoCode;
+};
+
+export const updatePromoCode = async (
+  id: string,
+  data: {
+    code?: string;
+    description?: string;
+    expiresAt?: Date;
+    isActive?: boolean;
+  },
+  adminId: string,
+) => {
+  if (data.expiresAt) {
+    ensurePromoCodeNotExpired(data.expiresAt);
+  }
+
+  const promoCode = await PromoCode.findById(id);
+  if (!promoCode) throw new AppError("Promo code not found", 404);
+
+  const before = toAuditRecord(promoCode.toObject());
+  if (data.code !== undefined) promoCode.code = data.code.trim().toUpperCase();
+  if (data.description !== undefined) promoCode.description = data.description;
+  if (data.expiresAt !== undefined) promoCode.expiresAt = data.expiresAt;
+  if (data.isActive !== undefined) promoCode.isActive = data.isActive;
+  promoCode.updatedBy = adminId as any;
+  await promoCode.save();
+
+  await AuditLog.create({
+    actor: adminId,
+    action: "promo_code.update",
+    resource: "promo_code",
+    resourceId: promoCode._id,
+    changes: { before, after: toAuditRecord(promoCode.toObject()) },
+    status: "success",
+  });
+
+  return promoCode;
+};
+
+export const invalidatePromoCode = async (id: string, adminId: string) => {
+  const promoCode = await PromoCode.findById(id);
+  if (!promoCode) throw new AppError("Promo code not found", 404);
+
+  const before = toAuditRecord(promoCode.toObject());
+  promoCode.isActive = false;
+  promoCode.invalidatedAt = new Date();
+  promoCode.invalidatedBy = adminId as any;
+  promoCode.updatedBy = adminId as any;
+  await promoCode.save();
+
+  await AuditLog.create({
+    actor: adminId,
+    action: "promo_code.invalidate",
+    resource: "promo_code",
+    resourceId: promoCode._id,
+    changes: { before, after: toAuditRecord(promoCode.toObject()) },
+    status: "success",
+  });
+
+  return promoCode;
+};
+
+export const deletePromoCode = async (id: string, adminId: string) => {
+  const promoCode = await PromoCode.findById(id);
+  if (!promoCode) throw new AppError("Promo code not found", 404);
+
+  await PromoCode.deleteOne({ _id: id });
+
+  await AuditLog.create({
+    actor: adminId,
+    action: "promo_code.delete",
+    resource: "promo_code",
+    resourceId: promoCode._id,
+    changes: { before: toAuditRecord(promoCode.toObject()) },
+    status: "success",
+  });
 };
 
 // ── Permission Management ───────────────────────────────────────

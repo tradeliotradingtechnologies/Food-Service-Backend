@@ -13,6 +13,12 @@ export const createOrderSchema = z.object({
       paymentMethod: z.enum(PAYMENT_METHODS, {
         message: "Invalid payment method",
       }),
+      promoCode: z
+        .string()
+        .min(3)
+        .max(32)
+        .regex(/^[A-Za-z0-9_-]+$/, "Invalid promo code format")
+        .optional(),
       notes: z.string().max(500).optional(),
     })
     .superRefine((data, ctx) => {

@@ -97,6 +97,8 @@ const orderSchema = new Schema<IOrder>(
     deliveryFee: { type: Number, default: 0, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },
     processingFee: { type: Number, default: 0, min: 0 },
+    processingFeeWaived: { type: Boolean, default: false },
+    appliedPromoCode: { type: String, trim: true, uppercase: true },
     tax: { type: Number, default: 0, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     status: {
