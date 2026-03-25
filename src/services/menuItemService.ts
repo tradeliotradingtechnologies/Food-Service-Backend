@@ -1,5 +1,7 @@
 import MenuItem from "../models/menuItemModel.js";
 import AppError from "../utils/appError.js";
+import { deleteImages, extractPublicIdFromUrl } from "./imageService.js";
+import type { IMenuItem } from "../types/model.types.js";
 
 interface MenuItemQuery {
   category?: string;
@@ -12,6 +14,29 @@ interface MenuItemQuery {
   limit: number;
   sort?: string;
 }
+
+type MenuItemImageSource = Pick<IMenuItem, "images" | "imagesPublicIds">;
+
+export const resolveMenuItemImagePublicIds = (
+  item: MenuItemImageSource,
+): string[] => {
+  const storedPublicIds = Array.isArray(item.imagesPublicIds)
+    ? item.imagesPublicIds
+    : [];
+  const imageUrls = Array.isArray(item.images) ? item.images : [];
+
+  if (storedPublicIds.length > 0) {
+    return [...new Set(storedPublicIds.filter(Boolean))];
+  }
+
+  return [
+    ...new Set(
+      imageUrls
+        .map((url) => extractPublicIdFromUrl(url))
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+};
 
 export const createMenuItem = async (
   data: Record<string, any>,
@@ -113,11 +138,26 @@ export const updateMenuItem = async (id: string, data: Record<string, any>) => {
 };
 
 export const deleteMenuItem = async (id: string) => {
-  const item = await MenuItem.findByIdAndUpdate(
-    id,
-    { deletedAt: new Date() },
-    { returnDocument: "after" },
-  );
+  const item = await MenuItem.findById(id);
   if (!item) throw new AppError("Menu item not found", 404);
+
+  const imagePublicIds = resolveMenuItemImagePublicIds(item);
+
+  item.deletedAt = new Date();
+  await item.save({ validateBeforeSave: false });
+
+  if (imagePublicIds.length > 0) {
+    try {
+      await deleteImages(imagePublicIds);
+    } catch (error) {
+      // Keep delete idempotent; retries can safely run against missing assets.
+      console.error("Failed to delete menu item images from Cloudinary", {
+        menuItemId: item._id.toString(),
+        imageCount: imagePublicIds.length,
+        error,
+      });
+    }
+  }
+
   return item;
 };

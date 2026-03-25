@@ -15,7 +15,7 @@ const nutritionalInfoSchema = new Schema(
 const menuItemSchema = new Schema<IMenuItem>(
   {
     name: { type: String, required: true, trim: true },
-    slug: { type: String, unique: true, lowercase: true, trim: true },
+    slug: { type: String, lowercase: true, trim: true },
     description: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     currency: { type: String, default: "GHS" },
@@ -30,6 +30,10 @@ const menuItemSchema = new Schema<IMenuItem>(
         validator: (v: string[]) => v.length >= 1,
         message: "At least one image is required",
       },
+    },
+    imagesPublicIds: {
+      type: [String],
+      default: [],
     },
     preparationTime: { type: Number, required: true }, // minutes
     ingredients: [{ type: String, trim: true }],
@@ -68,6 +72,14 @@ menuItemSchema.pre("validate", function () {
 });
 
 menuItemSchema.plugin(softDeletePlugin);
+
+menuItemSchema.index(
+  { slug: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { deletedAt: null },
+  },
+);
 
 const MenuItem = model<IMenuItem>("MenuItem", menuItemSchema);
 

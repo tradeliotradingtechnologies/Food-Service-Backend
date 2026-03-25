@@ -221,6 +221,7 @@ export interface IMenuItem extends Document, ISoftDeletable {
   currency: string;
   category: Ref<ICategory>;
   images: string[];
+  imagesPublicIds: string[];
   preparationTime: number;
   ingredients: string[];
   allergens: string[];
