@@ -59,12 +59,34 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   EMAIL_REPLY_TO: z.string().optional(),
+  SENDGRID_API_KEY: z.string().optional(),
+});
+
+const envSchemaWithChecks = envSchema.superRefine((env, ctx) => {
+  if (env.NODE_ENV !== "production") return;
+
+  if (!env.SENDGRID_API_KEY) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["SENDGRID_API_KEY"],
+      message: "SENDGRID_API_KEY is required in production.",
+    });
+  }
+
+  if (!env.EMAIL_FROM) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["EMAIL_FROM"],
+      message:
+        "EMAIL_FROM is required in production and must be a verified SendGrid sender.",
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-  const result = envSchema.safeParse(process.env);
+  const result = envSchemaWithChecks.safeParse(process.env);
 
   if (!result.success) {
     console.error("❌ Environment validation failed:");

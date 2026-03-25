@@ -13,6 +13,7 @@ const getPrimaryClientUrl = (): string =>
 // In production: uses real SMTP (SendGrid, Mailgun, AWS SES, etc.)
 
 let transporter: nodemailer.Transporter;
+let providerLogged = false;
 
 const createTransporter = async (): Promise<nodemailer.Transporter> => {
   if (transporter) return transporter;
@@ -48,8 +49,17 @@ const sendMail = async (options: SendMailOptions): Promise<string | null> => {
       process.env.EMAIL_FROM ||
       '"Erica\'s Kitchen" <noreply@ericaskitchen.com>';
 
-    if (process.env.NODE_ENV === "production" && process.env.SENDGRID_API_KEY) {
+    if (process.env.NODE_ENV === "production") {
+      if (!process.env.SENDGRID_API_KEY) {
+        throw new Error("SENDGRID_API_KEY is missing in production.");
+      }
+
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      if (!providerLogged) {
+        console.log("📧 Email provider: SendGrid (production)");
+        providerLogged = true;
+      }
+
       const msg = {
         to: options.to,
         from,
@@ -62,6 +72,10 @@ const sendMail = async (options: SendMailOptions): Promise<string | null> => {
     } else {
       // Dev/test: use nodemailer/Ethereal
       const transport = await createTransporter();
+      if (!providerLogged) {
+        console.log("📧 Email provider: Ethereal (non-production)");
+        providerLogged = true;
+      }
       const info = await transport.sendMail({
         from,
         to: options.to,
@@ -76,8 +90,22 @@ const sendMail = async (options: SendMailOptions): Promise<string | null> => {
       }
       return info.messageId;
     }
-  } catch (error) {
-    console.error("❌ Email send failed:", error);
+  } catch (error: any) {
+    const sendGridErrors = error?.response?.body?.errors;
+    if (Array.isArray(sendGridErrors) && sendGridErrors.length > 0) {
+      console.error("❌ SendGrid email rejected", {
+        code: error?.code,
+        statusCode: error?.response?.statusCode,
+        from: process.env.EMAIL_FROM,
+        details: sendGridErrors.map((e: any) => ({
+          message: e?.message,
+          field: e?.field,
+          help: e?.help,
+        })),
+      });
+    } else {
+      console.error("❌ Email send failed:", error);
+    }
     // Don't throw — emails failing should not break the main flow
     return null;
   }
