@@ -44,7 +44,13 @@ const userSchema = new Schema<IUser>(
       required: true,
     },
     avatar: { type: String },
-    phoneNumber: { type: String, trim: true, required: true },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      required: function (this: IUser) {
+        return this.authMethod === "local";
+      },
+    },
     addresses: [{ type: Schema.Types.ObjectId, ref: "Address" }],
     defaultAddress: { type: Schema.Types.ObjectId, ref: "Address" },
     active: { type: Boolean, default: true },
