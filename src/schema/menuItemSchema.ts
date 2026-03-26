@@ -12,7 +12,7 @@ const nutritionalInfoSchema = z
 export const createMenuItemSchema = z.object({
   body: z.object({
     name: z.string().min(1, "Name is required").max(150),
-    description: z.string().min(1, "Description is required").max(1000),
+    description: z.string().min(1, "Description is required").max(1000).optional(),
     price: z
       .union([z.number(), z.string()])
       .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
