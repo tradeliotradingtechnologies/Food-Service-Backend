@@ -184,54 +184,54 @@ export async function seedData(): Promise<void> {
   // ─── 3. Categories ────────────────────────────────────────────
   const categoriesData = [
     {
-      name: "Main Dishes",
+      name: "Popular",
       description: "Hearty Ghanaian and African main courses",
       image: "https://images.unsplash.com/photo-main-dishes.jpg",
       isActive: true,
       sortOrder: 1,
     },
     {
-      name: "Soups & Stews",
+      name: "Locals",
       description: "Traditional Ghanaian soups and stews",
       image: "https://images.unsplash.com/photo-soups.jpg",
       isActive: true,
       sortOrder: 2,
     },
     {
-      name: "Rice Dishes",
+      name: "Continental",
       description: "Jollof, Waakye, fried rice, and more",
       image: "https://images.unsplash.com/photo-rice.jpg",
       isActive: true,
       sortOrder: 3,
     },
     {
-      name: "Grills & BBQ",
+      name: "Drinks",
       description: "Grilled meats, chicken, and seafood",
       image: "https://images.unsplash.com/photo-grill.jpg",
       isActive: true,
       sortOrder: 4,
     },
-    {
-      name: "Sides",
-      description: "Tasty sides to complement your meal",
-      image: "https://images.unsplash.com/photo-sides.jpg",
-      isActive: true,
-      sortOrder: 5,
-    },
-    {
-      name: "Beverages",
-      description: "Refreshing drinks and smoothies",
-      image: "https://images.unsplash.com/photo-beverages.jpg",
-      isActive: true,
-      sortOrder: 6,
-    },
-    {
-      name: "Desserts",
-      description: "Sweet treats to finish your meal",
-      image: "https://images.unsplash.com/photo-desserts.jpg",
-      isActive: true,
-      sortOrder: 7,
-    },
+    // {
+    //   name: "Sides",
+    //   description: "Tasty sides to complement your meal",
+    //   image: "https://images.unsplash.com/photo-sides.jpg",
+    //   isActive: true,
+    //   sortOrder: 5,
+    // },
+    // {
+    //   name: "Beverages",
+    //   description: "Refreshing drinks and smoothies",
+    //   image: "https://images.unsplash.com/photo-beverages.jpg",
+    //   isActive: true,
+    //   sortOrder: 6,
+    // },
+    // {
+    //   name: "Desserts",
+    //   description: "Sweet treats to finish your meal",
+    //   image: "https://images.unsplash.com/photo-desserts.jpg",
+    //   isActive: true,
+    //   sortOrder: 7,
+    // },
   ];
 
   const categories = await Category.insertMany(categoriesData);
