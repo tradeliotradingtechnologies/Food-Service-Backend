@@ -75,7 +75,20 @@ export const confirmPayment = async (
   await payment.save();
 
   // Update order payment status
+
+  // Update order payment status
   await Order.findByIdAndUpdate(payment.order, { paymentStatus: "success" });
+
+  // Clear the user's cart after successful payment
+  const order = await Order.findById(payment.order);
+  if (order && order.user) {
+    const Cart = (await import("../models/cartModel.js")).default;
+    const cart = await Cart.findOne({ user: order.user });
+    if (cart) {
+      cart.items = [];
+      await cart.save();
+    }
+  }
 
   return payment;
 };

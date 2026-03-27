@@ -275,9 +275,7 @@ export const createOrder = async (
     notes: data.notes,
   });
 
-  // Clear the cart after order creation
-  cart.items = [] as any;
-  await cart.save();
+  // Do not clear the cart here; clear only after successful payment
 
   return order;
 };
