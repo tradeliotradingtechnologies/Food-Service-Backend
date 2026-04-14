@@ -78,11 +78,7 @@ router.get("/audit-logs", authorize("audit_log:read"), ctrl.getAuditLogs);
 
 // ── Settings (super_admin only) ───────────────────────────────
 router.get("/settings", authorize("setting:read"), ctrl.getAllSettings);
-router.get(
-  "/settings/processing-fee",
-  requireRole("super_admin"),
-  ctrl.getProcessingFee,
-);
+router.get("/settings/processing-fee", ctrl.getProcessingFee);
 router.get(
   "/settings/:key",
   authorize("setting:read"),

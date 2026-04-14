@@ -16,7 +16,7 @@ import AppError from "../utils/appError.js";
  * timing-based side-channel attacks.
  */
 
-// Paths that are exempt from API key checks (webhooks use their own auth)
+// Paths that are exempt from API key checks (public/read-only or webhook auth)
 const EXEMPT_PATHS = ["/api/v1/payments/webhook/paystack"];
 
 export const requireApiKey = (
