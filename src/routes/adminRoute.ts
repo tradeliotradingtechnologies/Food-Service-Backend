@@ -73,7 +73,7 @@ router.patch(
 
 router.get("/permissions", authorize("setting:read"), ctrl.getAllPermissions);
 
-// ── Audit Logs ───────────────────────────────────────────
+// ── Audit Logs ───────────────────────────────────────────https://main.dylwj30bhegwe.amplifyapp.com/
 router.get("/audit-logs", authorize("audit_log:read"), ctrl.getAuditLogs);
 
 // ── Settings (super_admin only) ───────────────────────────────

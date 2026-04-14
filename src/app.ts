@@ -86,9 +86,11 @@ if (isProduction) {
 }
 
 // ── CORS ────────────────────────────────────────────────────────
+const normalizeOrigin = (value: string) => value.trim().replace(/\/$/, "");
+
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:3000")
   .split(",")
-  .map((o) => o.trim())
+  .map((o) => normalizeOrigin(o))
   .filter(Boolean);
 
 app.use(
@@ -96,7 +98,9 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, health checks)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (allowedOrigins.includes(normalizeOrigin(origin))) {
+        return callback(null, true);
+      }
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
