@@ -55,9 +55,10 @@ export const paystackWebhook = catchAsync(
 
 export const initiatePayment = catchAsync(
   async (req: Request, res: Response) => {
+    // Expect cartSnapshot in request body
     const payment = await paymentService.initiatePayment(
       req.user._id,
-      req.body.orderId,
+      req.body.cartSnapshot,
       req.body.method,
       req.body.provider,
     );

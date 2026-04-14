@@ -1,3 +1,28 @@
+// Create order from cartSnapshot (used after payment confirmation)
+export const createOrderFromPaymentSnapshot = async (
+  userId: string,
+  cartSnapshot: any,
+) => {
+  // cartSnapshot should contain all necessary order fields
+  // Validate and map fields as needed
+  const orderData = {
+    user: userId,
+    items: cartSnapshot.items,
+    orderType: cartSnapshot.orderType || "delivery",
+    deliveryAddress: cartSnapshot.deliveryAddress,
+    deliveryFee: cartSnapshot.deliveryFee || 0,
+    subtotal: cartSnapshot.subtotal,
+    processingFee: cartSnapshot.processingFee || 0,
+    processingFeeWaived: cartSnapshot.processingFeeWaived || false,
+    appliedPromoCode: cartSnapshot.appliedPromoCode,
+    tax: cartSnapshot.tax || 0,
+    totalAmount: cartSnapshot.totalAmount,
+    paymentMethod: cartSnapshot.paymentMethod,
+    notes: cartSnapshot.notes,
+  };
+  const order = await Order.create(orderData);
+  return order;
+};
 import Order from "../models/orderModel.js";
 import Cart from "../models/cartModel.js";
 import MenuItem from "../models/menuItemModel.js";

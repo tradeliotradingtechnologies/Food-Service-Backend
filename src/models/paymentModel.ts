@@ -7,8 +7,8 @@ const paymentSchema = new Schema<IPayment>(
     order: {
       type: Schema.Types.ObjectId,
       ref: "Order",
-      required: true,
-      unique: true, // 1:1 with order
+      required: false,
+      unique: true, // 1:1 with order (if created)
     },
     user: {
       type: Schema.Types.ObjectId,
@@ -34,6 +34,7 @@ const paymentSchema = new Schema<IPayment>(
     refundedAt: { type: Date },
     refundAmount: { type: Number, min: 0 },
     metadata: { type: Schema.Types.Mixed },
+    cartSnapshot: { type: Schema.Types.Mixed }, // Store cart data at payment initiation
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

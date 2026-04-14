@@ -428,7 +428,7 @@ export interface IPromoCode extends Document {
 // ──────────────────────────────── Payment ────────────────────────────────
 
 export interface IPayment extends Document {
-  order: Ref<IOrder>;
+  order?: Ref<IOrder>;
   user: Ref<IUser>;
   amount: number;
   currency: string;
@@ -440,6 +440,7 @@ export interface IPayment extends Document {
   refundedAt?: Date;
   refundAmount?: number;
   metadata?: Record<string, unknown>;
+  cartSnapshot?: Record<string, unknown>; // Store cart data at payment initiation
   createdAt: Date;
 }
 

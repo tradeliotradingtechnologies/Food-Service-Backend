@@ -6,7 +6,7 @@ import type { PaymentMethod } from "../types/model.types.js";
 
 export const initiatePayment = async (
   userId: string,
-  orderId: string,
+  cartSnapshot: Record<string, any>,
   method: PaymentMethod,
   provider?: string,
 ) => {
@@ -19,32 +19,35 @@ export const initiatePayment = async (
     );
   }
 
-  const order = await Order.findOne({ _id: orderId, user: userId });
-  if (!order) throw new AppError("Order not found", 404);
-
-  // Check if payment already exists for this order
-  const existing = await Payment.findOne({ order: orderId });
-  if (existing && existing.status === "success") {
-    throw new AppError("Order is already paid", 400);
+  // Calculate total amount from cartSnapshot
+  const amount = cartSnapshot.totalAmount;
+  if (!amount || amount <= 0) {
+    throw new AppError("Invalid cart total amount for payment", 400);
   }
 
+  // Optionally, prevent duplicate pending payments for the same cart/user
+  const existing = await Payment.findOne({
+    user: userId,
+    status: { $in: ["initiated", "pending"] },
+  });
   if (existing) {
-    // Update existing initiated/failed payment
     existing.method = method;
     existing.provider = provider;
     existing.status = "initiated";
+    existing.amount = amount;
+    existing.cartSnapshot = cartSnapshot;
     await existing.save();
     return existing;
   }
 
   return Payment.create({
-    order: orderId,
     user: userId,
-    amount: order.totalAmount,
+    amount,
     currency: paymentSettings.currency,
     method,
     provider,
     status: "initiated",
+    cartSnapshot,
   });
 };
 
@@ -74,14 +77,26 @@ export const confirmPayment = async (
   if (metadata) payment.metadata = metadata;
   await payment.save();
 
-  // Update order payment status
+  // If order does not exist, create it from cartSnapshot
+  let order = null;
+  if (!payment.order && payment.cartSnapshot) {
+    const orderService = await import("./orderService.js");
+    // cartSnapshot should contain all necessary order fields
+    order = await orderService.createOrderFromPaymentSnapshot(
+      payment.user,
+      payment.cartSnapshot,
+    );
+    payment.order = order._id;
+    await payment.save();
+  } else if (payment.order) {
+    order = await Order.findById(payment.order);
+  }
 
-  // Update order payment status
-  await Order.findByIdAndUpdate(payment.order, { paymentStatus: "success" });
-
-  // Clear the user's cart after successful payment
-  const order = await Order.findById(payment.order);
-  if (order && order.user) {
+  // Update order payment status if order exists
+  if (order) {
+    order.paymentStatus = "success";
+    await order.save();
+    // Clear the user's cart
     const Cart = (await import("../models/cartModel.js")).default;
     const cart = await Cart.findOne({ user: order.user });
     if (cart) {
